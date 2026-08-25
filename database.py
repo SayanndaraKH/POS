@@ -443,10 +443,25 @@ def seed_data_if_empty():
 
 # Helper functions for POS & Orders
 def get_store_settings():
-    conn = get_db()
-    rows = conn.execute('SELECT key, value FROM store_settings').fetchall()
-    conn.close()
-    return {row['key']: row['value'] for row in rows}
+    try:
+        conn = get_db()
+        rows = conn.execute('SELECT key, value FROM store_settings').fetchall()
+        conn.close()
+        return {row['key']: row['value'] for row in rows}
+    except Exception as e:
+        print(f"[Warning] get_store_settings fallback: {e}")
+        return {
+            'shop_name_km': 'ហាងតែគុជ ស្រស់ស្រាយ (Sros Sray Boba)',
+            'shop_name_en': 'Sros Sray Boba & Beverage',
+            'shop_phone': '012 345 678 / 098 765 432',
+            'shop_address': 'ផ្ទះលេខ ១២ ផ្លូវ ២០០ រាជធានីភ្នំពេញ',
+            'exchange_rate': '4100',
+            'receipt_footer_km': 'សូមអរគុណចំពោះការគាំទ្រ! សូមអញ្ជើញមកម្តងទៀត!',
+            'khqr_bakong_id': 'srossray_tea@aclb',
+            'khqr_merchant_name': 'SROS SRAY TEA & COFFEE',
+            'khqr_image_url': '',
+            'khqr_instruction': 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់'
+        }
 
 def update_store_settings(settings_dict):
     conn = get_db()

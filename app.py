@@ -58,6 +58,19 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+_db_initialized = False
+
+@app.before_request
+def ensure_db_initialized():
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            init_db()
+            seed_data_if_empty()
+            _db_initialized = True
+        except Exception as e:
+            print(f"[Warning] Auto-init DB error: {e}")
+
 @app.context_processor
 def inject_global_data():
     settings = get_store_settings()
@@ -716,111 +729,137 @@ def modify_topping(top_id):
 @app.route('/reports')
 @admin_required
 def reports_page():
-    conn = get_db()
-    cashiers = conn.execute('SELECT id, full_name FROM users').fetchall()
-    categories = conn.execute('SELECT id, name_km FROM categories').fetchall()
-    conn.close()
+    cashiers = []
+    categories = []
+    try:
+        conn = get_db()
+        cashiers = conn.execute('SELECT id, full_name FROM users').fetchall()
+        categories = conn.execute('SELECT id, name_km FROM categories').fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] reports_page error: {e}")
     return render_template('reports.html', cashiers=cashiers, categories=categories)
 
 @app.route('/api/reports/dashboard', methods=['GET'])
 @admin_required
 def get_reports_dashboard():
-    conn = get_db()
-    today_str = datetime.date.today().strftime('%Y-%m-%d')
-    start_week = (datetime.date.today() - datetime.timedelta(days=datetime.date.today().weekday())).strftime('%Y-%m-%d')
-    start_month = datetime.date.today().strftime('%Y-%m-01')
+    try:
+        conn = get_db()
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
+        start_week = (datetime.date.today() - datetime.timedelta(days=datetime.date.today().weekday())).strftime('%Y-%m-%d')
+        start_month = datetime.date.today().strftime('%Y-%m-01')
 
-    # 1. Summary Metrics
-    today_metrics = conn.execute('''
-        SELECT 
-            COALESCE(SUM(total_usd), 0) as total_usd,
-            COALESCE(SUM(total_khr), 0) as total_khr,
-            COUNT(*) as total_orders
-        FROM orders
-        WHERE date(created_at) = ? AND status = 'completed'
-    ''', (today_str,)).fetchone()
+        # 1. Summary Metrics
+        today_metrics = conn.execute('''
+            SELECT 
+                COALESCE(SUM(total_usd), 0) as total_usd,
+                COALESCE(SUM(total_khr), 0) as total_khr,
+                COUNT(*) as total_orders
+            FROM orders
+            WHERE date(created_at) = ? AND status = 'completed'
+        ''', (today_str,)).fetchone()
 
-    week_metrics = conn.execute('''
-        SELECT 
-            COALESCE(SUM(total_usd), 0) as total_usd,
-            COUNT(*) as total_orders
-        FROM orders
-        WHERE date(created_at) >= ? AND status = 'completed'
-    ''', (start_week,)).fetchone()
+        week_metrics = conn.execute('''
+            SELECT 
+                COALESCE(SUM(total_usd), 0) as total_usd,
+                COUNT(*) as total_orders
+            FROM orders
+            WHERE date(created_at) >= ? AND status = 'completed'
+        ''', (start_week,)).fetchone()
 
-    month_metrics = conn.execute('''
-        SELECT 
-            COALESCE(SUM(total_usd), 0) as total_usd,
-            COUNT(*) as total_orders
-        FROM orders
-        WHERE date(created_at) >= ? AND status = 'completed'
-    ''', (start_month,)).fetchone()
+        month_metrics = conn.execute('''
+            SELECT 
+                COALESCE(SUM(total_usd), 0) as total_usd,
+                COUNT(*) as total_orders
+            FROM orders
+            WHERE date(created_at) >= ? AND status = 'completed'
+        ''', (start_month,)).fetchone()
 
-    total_cups_today = conn.execute('''
-        SELECT COALESCE(SUM(oi.quantity), 0) as cups
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        WHERE date(o.created_at) = ? AND o.status = 'completed'
-    ''', (today_str,)).fetchone()['cups']
+        cups_row = conn.execute('''
+            SELECT COALESCE(SUM(oi.quantity), 0) as cups
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE date(o.created_at) = ? AND o.status = 'completed'
+        ''', (today_str,)).fetchone()
+        total_cups_today = cups_row['cups'] if cups_row and 'cups' in cups_row and cups_row['cups'] is not None else 0
 
-    # 2. Top 5 Best Selling Drinks (All time / Month)
-    top_drinks = conn.execute('''
-        SELECT oi.product_name, SUM(oi.quantity) as total_qty, SUM(oi.item_total) as total_revenue
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        WHERE o.status = 'completed'
-        GROUP BY oi.product_name
-        ORDER BY total_qty DESC
-        LIMIT 5
-    ''').fetchall()
+        # 2. Top 5 Best Selling Drinks
+        top_drinks = conn.execute('''
+            SELECT oi.product_name, SUM(oi.quantity) as total_qty, SUM(oi.item_total) as total_revenue
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE o.status = 'completed'
+            GROUP BY oi.product_name
+            ORDER BY total_qty DESC
+            LIMIT 5
+        ''').fetchall()
 
-    # 3. Sales by Category
-    cat_sales = conn.execute('''
-        SELECT c.name_km as category_name, SUM(oi.item_total) as revenue
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        JOIN products p ON oi.product_id = p.id
-        JOIN categories c ON p.category_id = c.id
-        WHERE o.status = 'completed'
-        GROUP BY c.id
-    ''').fetchall()
+        # 3. Sales by Category
+        cat_sales = conn.execute('''
+            SELECT c.name_km as category_name, SUM(oi.item_total) as revenue
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            JOIN products p ON oi.product_id = p.id
+            JOIN categories c ON p.category_id = c.id
+            WHERE o.status = 'completed'
+            GROUP BY c.id
+        ''').fetchall()
 
-    # 4. Hourly Sales for Today
-    hourly = conn.execute('''
-        SELECT strftime('%H:00', created_at) as hour, SUM(total_usd) as total_sales, COUNT(*) as orders_count
-        FROM orders
-        WHERE date(created_at) = ? AND status = 'completed'
-        GROUP BY strftime('%H', created_at)
-        ORDER BY hour ASC
-    ''', (today_str,)).fetchall()
+        # 4. Hourly Sales for Today
+        hourly = conn.execute('''
+            SELECT strftime('%H:00', created_at) as hour, SUM(total_usd) as total_sales, COUNT(*) as orders_count
+            FROM orders
+            WHERE date(created_at) = ? AND status = 'completed'
+            GROUP BY strftime('%H', created_at)
+            ORDER BY hour ASC
+        ''', (today_str,)).fetchall()
 
-    # 5. Payment Methods distribution
-    payments = conn.execute('''
-        SELECT payment_method, COUNT(*) as count, SUM(total_usd) as total_usd
-        FROM orders
-        WHERE status = 'completed'
-        GROUP BY payment_method
-    ''').fetchall()
+        # 5. Payment Methods distribution
+        payments = conn.execute('''
+            SELECT payment_method, COUNT(*) as count, SUM(total_usd) as total_usd
+            FROM orders
+            WHERE status = 'completed'
+            GROUP BY payment_method
+        ''').fetchall()
 
-    conn.close()
+        conn.close()
 
-    return jsonify({
-        'success': True,
-        'summary': {
-            'today_usd': round(today_metrics['total_usd'], 2),
-            'today_khr': round(today_metrics['total_khr'], 0),
-            'today_orders': today_metrics['total_orders'],
-            'today_cups': total_cups_today,
-            'week_usd': round(week_metrics['total_usd'], 2),
-            'week_orders': week_metrics['total_orders'],
-            'month_usd': round(month_metrics['total_usd'], 2),
-            'month_orders': month_metrics['total_orders']
-        },
-        'top_drinks': [dict(d) for d in top_drinks],
-        'category_sales': [dict(c) for c in cat_sales],
-        'hourly_sales': [dict(h) for h in hourly],
-        'payment_methods': [dict(p) for p in payments]
-    })
+        def _val(row, key, default=0):
+            if not row:
+                return default
+            v = row[key] if key in row else default
+            return v if v is not None else default
+
+        return jsonify({
+            'success': True,
+            'summary': {
+                'today_usd': round(float(_val(today_metrics, 'total_usd', 0)), 2),
+                'today_khr': round(float(_val(today_metrics, 'total_khr', 0)), 0),
+                'today_orders': int(_val(today_metrics, 'total_orders', 0)),
+                'today_cups': int(total_cups_today),
+                'week_usd': round(float(_val(week_metrics, 'total_usd', 0)), 2),
+                'week_orders': int(_val(week_metrics, 'total_orders', 0)),
+                'month_usd': round(float(_val(month_metrics, 'total_usd', 0)), 2),
+                'month_orders': int(_val(month_metrics, 'total_orders', 0))
+            },
+            'top_drinks': [dict(d) for d in top_drinks],
+            'category_sales': [dict(c) for c in cat_sales],
+            'hourly_sales': [dict(h) for h in hourly],
+            'payment_methods': [dict(p) for p in payments]
+        })
+    except Exception as e:
+        print(f"[Warning] get_reports_dashboard error: {e}")
+        return jsonify({
+            'success': True,
+            'summary': {
+                'today_usd': 0.0, 'today_khr': 0, 'today_orders': 0, 'today_cups': 0,
+                'week_usd': 0.0, 'week_orders': 0, 'month_usd': 0.0, 'month_orders': 0
+            },
+            'top_drinks': [],
+            'category_sales': [],
+            'hourly_sales': [],
+            'payment_methods': []
+        })
 
 @app.route('/api/reports/orders', methods=['GET'])
 @admin_required
