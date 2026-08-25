@@ -145,8 +145,10 @@ class TursoCursor:
 
 class TursoConnection:
     def __init__(self, url, auth_token):
-        # Format URL
-        url = url.strip()
+        # Clean URL and Token
+        url = str(url or "").strip().strip('"').strip("'")
+        auth_token = str(auth_token or "").strip().strip('"').strip("'")
+        
         if url.startswith("libsql://"):
             url = "https://" + url[len("libsql://"):]
         if not url.startswith("http://") and not url.startswith("https://"):
@@ -155,7 +157,7 @@ class TursoConnection:
             url = url.rstrip("/") + "/v2/pipeline"
 
         self.endpoint = url
-        self.auth_token = auth_token.strip()
+        self.auth_token = auth_token
         self.row_factory = TursoRow
 
     def _send_pipeline(self, payload):

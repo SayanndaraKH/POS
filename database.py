@@ -13,27 +13,33 @@ TURSO_TOKEN = os.environ.get('TURSO_AUTH_TOKEN', '')
 def is_cloud_db():
     return bool(TURSO_URL and TURSO_URL.strip().startswith(('libsql://', 'https://', 'http://')))
 
-if not is_cloud_db():
-    # Handle read-only filesystem on Vercel Serverless if no Cloud DB is configured
-    if os.environ.get('VERCEL'):
-        DB_PATH = '/tmp/pos_tea.db'
-        default_db = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
-        if not os.path.exists(DB_PATH) and os.path.exists(default_db):
-            try:
-                shutil.copyfile(default_db, DB_PATH)
-            except Exception:
-                pass
-    else:
-        DB_PATH = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
+# Fallback local/tmp DB path
+if os.environ.get('VERCEL'):
+    LOCAL_DB_PATH = '/tmp/pos_tea.db'
+    default_db = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
+    if not os.path.exists(LOCAL_DB_PATH) and os.path.exists(default_db):
+        try:
+            shutil.copyfile(default_db, LOCAL_DB_PATH)
+        except Exception:
+            pass
 else:
-    DB_PATH = TURSO_URL
+    LOCAL_DB_PATH = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
+
+DB_PATH = TURSO_URL if is_cloud_db() else LOCAL_DB_PATH
 
 def get_db():
     if is_cloud_db():
-        return connect_turso(TURSO_URL, TURSO_TOKEN)
-    conn = sqlite3.connect(DB_PATH)
+        try:
+            return connect_turso(TURSO_URL, TURSO_TOKEN)
+        except Exception as e:
+            print(f"[Warning] Turso connection error: {e}, falling back to local DB")
+    
+    conn = sqlite3.connect(LOCAL_DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+    except Exception:
+        pass
     return conn
 
 def init_db():

@@ -28,10 +28,13 @@ try:
 except Exception:
     pass
 
-# Ensure DB is created on startup
-with app.app_context():
-    init_db()
-    seed_data_if_empty()
+# Ensure DB is created on startup safely
+try:
+    with app.app_context():
+        init_db()
+        seed_data_if_empty()
+except Exception as e:
+    print(f"[Warning] Startup DB initialization note: {e}")
 
 # ----------------- AUTHENTICATION HELPERS -----------------
 def login_required(f):
