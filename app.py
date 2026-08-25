@@ -926,8 +926,11 @@ def export_orders_excel():
         params.append(end_date)
 
     query += ' ORDER BY o.id DESC'
-    df = pd.read_sql_query(query, conn, params=params)
+    rows = conn.execute(query, params).fetchall()
     conn.close()
+    
+    data_list = [dict(r) for r in rows]
+    df = pd.DataFrame(data_list) if data_list else pd.DataFrame(columns=['លេខវិក្កយបត្រ', 'អ្នកគិតលុយ', 'កាលបរិច្ឆេទ', 'វិធីទូទាត់', 'តម្លៃសរុបដើម ($)', 'បញ្ចុះតម្លៃ ($)', 'សរុបជាដុល្លារ ($)', 'សរុបជារៀល (៛)', 'ស្ថានភាព'])
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -971,8 +974,11 @@ def export_orders_csv():
         params.append(end_date)
 
     query += ' ORDER BY o.id DESC'
-    df = pd.read_sql_query(query, conn, params=params)
+    rows = conn.execute(query, params).fetchall()
     conn.close()
+
+    data_list = [dict(r) for r in rows]
+    df = pd.DataFrame(data_list) if data_list else pd.DataFrame(columns=['Invoice_No', 'Cashier', 'Date_Time', 'Payment', 'Total_USD', 'Total_KHR', 'Status'])
 
     output = io.StringIO()
     df.to_csv(output, index=False, encoding='utf-8-sig')

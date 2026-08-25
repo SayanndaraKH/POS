@@ -4,20 +4,33 @@ import json
 import shutil
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from turso_db import connect_turso
 
-# Handle read-only filesystem on Vercel Serverless
-if os.environ.get('VERCEL'):
-    DB_PATH = '/tmp/pos_tea.db'
-    default_db = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
-    if not os.path.exists(DB_PATH) and os.path.exists(default_db):
-        try:
-            shutil.copyfile(default_db, DB_PATH)
-        except Exception:
-            pass
+# Database Selection: Turso Cloud SQLite or Local SQLite
+TURSO_URL = os.environ.get('TURSO_DATABASE_URL') or os.environ.get('DATABASE_URL')
+TURSO_TOKEN = os.environ.get('TURSO_AUTH_TOKEN', '')
+
+def is_cloud_db():
+    return bool(TURSO_URL and TURSO_URL.strip().startswith(('libsql://', 'https://', 'http://')))
+
+if not is_cloud_db():
+    # Handle read-only filesystem on Vercel Serverless if no Cloud DB is configured
+    if os.environ.get('VERCEL'):
+        DB_PATH = '/tmp/pos_tea.db'
+        default_db = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
+        if not os.path.exists(DB_PATH) and os.path.exists(default_db):
+            try:
+                shutil.copyfile(default_db, DB_PATH)
+            except Exception:
+                pass
+    else:
+        DB_PATH = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
 else:
-    DB_PATH = os.path.join(os.path.dirname(__file__), 'pos_tea.db')
+    DB_PATH = TURSO_URL
 
 def get_db():
+    if is_cloud_db():
+        return connect_turso(TURSO_URL, TURSO_TOKEN)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
