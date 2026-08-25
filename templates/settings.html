@@ -202,7 +202,12 @@
 
       <div class="form-group">
         <label class="form-label">លេខសម្ងាត់ (Password) <span id="pwdHint" style="font-size:0.75rem; color:#94a3b8;"></span>:</label>
-        <input type="password" id="userPassword" class="form-control" placeholder="បញ្ចូលលេខសម្ងាត់">
+        <div class="password-input-wrapper">
+          <input type="password" id="userPassword" class="form-control" placeholder="បញ្ចូលលេខសម្ងាត់">
+          <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('userPassword', this)" title="បង្ហាញ/លាក់លេខសម្ងាត់">
+            <i data-lucide="eye" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
       </div>
 
       <div class="form-group">

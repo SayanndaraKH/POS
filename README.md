@@ -72,3 +72,12 @@ python app.py
 | :--- | :--- | :--- | :--- |
 | **👑 Admin** | `admin` | `admin123` | គ្រប់គ្រងគ្រប់មុខងារ (Full Access) |
 | **☕ Cashier** | `cashier` | `123456` | ផ្ទាំងលក់ POS & វេនលក់ផ្ទាល់ខ្លួន |
+
+---
+
+## 🚀 របៀប Update កូដ និង Deploy ទៅ Vercel ដោយចុចតែ ១ ឃ្លីក (One-Click Deploy)
+
+រាល់ពេលអ្នកកែប្រែកូដ ឬបន្ថែម Interface ថ្មីៗ៖
+- គ្រាន់តែ **Double-Click (ចុច ២ ដង)** លើឯកសារ **`push_to_github_and_deploy.bat`**
+- ប្រព័ន្ធនឹងរុញ (Push) កូដថ្មីទៅកាន់ **GitHub** និងបញ្ជា **Vercel** ឱ្យ Deploy ស្វ័យប្រវត្តិភ្លាមៗ!
+

@@ -4,62 +4,62 @@
 
 {% block content %}
 <div style="min-height: calc(100vh - 120px); display: flex; align-items: center; justify-content: center;">
-  <div style="background:#ffffff; border-radius:18px; border:1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08); width:100%; max-width:440px; padding:2.5rem; text-align:center;">
+  <div style="background:#ffffff; border-radius:20px; border:1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08); width:100%; max-width:440px; padding:2.5rem; text-align:center;">
     
     <!-- Logo & Header -->
-    <img src="{{ url_for('static', filename='images/shop_logo.svg') }}" alt="Logo" style="width:84px; height:84px; border-radius:20px; box-shadow:0 8px 16px rgba(16, 185, 129, 0.25); margin-bottom:1.2rem;">
+    <img src="{{ url_for('static', filename='images/shop_logo.svg') }}" alt="Logo" style="width:88px; height:88px; border-radius:22px; box-shadow:0 8px 16px rgba(16, 185, 129, 0.25); margin-bottom:1.2rem;">
     
     <h1 style="font-size:1.45rem; font-weight:800; color:#064e3b; margin-bottom:4px;">
       {{ settings.get('shop_name_km', 'ហាងតែគុជ ស្រស់ស្រាយ') }}
     </h1>
-    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.8rem;">
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:2rem;">
       ប្រព័ន្ធគ្រប់គ្រងការលក់ និងស្តុកភេសជ្ជៈ (POS System)
     </p>
 
     <!-- Login Form -->
-    <form method="POST" action="{{ url_for('login') }}" style="text-align:left; display:flex; flex-direction:column; gap:1.2rem;">
+    <form method="POST" action="{{ url_for('login') }}" style="text-align:left; display:flex; flex-direction:column; gap:1.25rem;">
       <div class="form-group">
         <label class="form-label" for="username">
           <i data-lucide="user" style="width:16px;height:16px; display:inline-block; vertical-align:middle;"></i> ឈ្មោះគណនី (Username)
         </label>
-        <input type="text" id="username" name="username" class="form-control" placeholder="ឧទាហរណ៍៖ admin ឬ cashier" required autofocus>
+        <input type="text" id="username" name="username" class="form-control" placeholder="បញ្ចូលឈ្មោះគណនីរបស់អ្នក" required autofocus>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="password">
           <i data-lucide="lock" style="width:16px;height:16px; display:inline-block; vertical-align:middle;"></i> លេខសម្ងាត់ (Password)
         </label>
-        <input type="password" id="password" name="password" class="form-control" placeholder="បញ្ចូលលេខសម្ងាត់របស់អ្នក" required>
+        <div class="password-input-wrapper">
+          <input type="password" id="password" name="password" class="form-control" placeholder="បញ្ចូលលេខសម្ងាត់របស់អ្នក" required>
+          <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('password', this)" title="បង្ហាញ/លាក់លេខសម្ងាត់">
+            <i data-lucide="eye" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
       </div>
 
-      <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:1rem; margin-top:0.5rem;">
+      <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:1rem; margin-top:0.8rem; border-radius:12px;">
         <i data-lucide="log-in"></i> ចូលប្រើប្រាស់ប្រព័ន្ធ (Login)
       </button>
     </form>
-
-    <!-- Quick Demo Logins -->
-    <div style="margin-top:1.8rem; padding-top:1.2rem; border-top:1px dashed #cbd5e1; text-align:center;">
-      <div style="font-size:0.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:10px;">
-        ចុចសាកល្បង Login គណនីគំរូរហ័ស (Quick Demo)
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button type="button" class="btn btn-secondary" style="flex:1; font-size:0.82rem; padding:8px;" onclick="fillLogin('admin', 'admin123')">
-          👑 Admin (គ្រប់មុខងារ)
-        </button>
-        <button type="button" class="btn btn-secondary" style="flex:1; font-size:0.82rem; padding:8px;" onclick="fillLogin('cashier', '123456')">
-          ☕ Cashier (ផ្ទាំងលក់)
-        </button>
-      </div>
-    </div>
 
   </div>
 </div>
 
 <script>
-  function fillLogin(u, p) {
-    document.getElementById('username').value = u;
-    document.getElementById('password').value = p;
-    document.querySelector('form').submit();
+  function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    
+    if (isPassword) {
+      btn.innerHTML = '<i data-lucide="eye-off" style="width:18px;height:18px;"></i>';
+    } else {
+      btn.innerHTML = '<i data-lucide="eye" style="width:18px;height:18px;"></i>';
+    }
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 </script>
 {% endblock %}
