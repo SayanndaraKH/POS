@@ -472,103 +472,114 @@ def update_store_settings(settings_dict):
     conn.close()
 
 def get_current_shift(cashier_id=None):
-    conn = get_db()
-    if cashier_id:
-        shift = conn.execute('''
-            SELECT * FROM shifts WHERE cashier_id = ? AND status = 'open' 
-            ORDER BY id DESC LIMIT 1
-        ''', (cashier_id,)).fetchone()
-    else:
-        shift = conn.execute('''
-            SELECT s.*, u.full_name as cashier_name 
-            FROM shifts s JOIN users u ON s.cashier_id = u.id 
-            WHERE s.status = 'open' 
-            ORDER BY s.id DESC LIMIT 1
-        ''').fetchone()
-    conn.close()
-    return dict(shift) if shift else None
+    try:
+        conn = get_db()
+        if cashier_id:
+            shift = conn.execute('''
+                SELECT * FROM shifts WHERE cashier_id = ? AND status = 'open' 
+                ORDER BY id DESC LIMIT 1
+            ''', (cashier_id,)).fetchone()
+        else:
+            shift = conn.execute('''
+                SELECT s.*, u.full_name as cashier_name 
+                FROM shifts s JOIN users u ON s.cashier_id = u.id 
+                WHERE s.status = 'open' 
+                ORDER BY s.id DESC LIMIT 1
+            ''').fetchone()
+        conn.close()
+        return dict(shift) if shift else None
+    except Exception as e:
+        print(f"[Warning] get_current_shift error: {e}")
+        return None
 
 def deduct_inventory_for_order(order_id, items, cashier_name="Cashier"):
     """
     Deducts raw materials based on recipes and selected toppings,
     and creates records in stock_logs.
     """
-    conn = get_db()
-    cursor = conn.cursor()
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
 
-    for item in items:
-        prod_id = item.get('product_id')
-        qty = int(item.get('quantity', 1))
-        size = item.get('size', 'M').upper()
-        toppings = item.get('toppings', [])
+        for item in items:
+            prod_id = item.get('product_id')
+            qty = int(item.get('quantity', 1))
+            size = item.get('size', 'M').upper()
+            toppings = item.get('toppings', [])
 
-        # 1. Deduct Product Recipe Ingredients
-        recipes = cursor.execute('''
-            SELECT pr.raw_material_id, pr.quantity_used, pr.for_size, rm.name_km, rm.current_stock, rm.unit
-            FROM product_recipes pr
-            JOIN raw_materials rm ON pr.raw_material_id = rm.id
-            WHERE pr.product_id = ? AND (pr.for_size = ? OR pr.for_size = 'ALL')
-        ''', (prod_id, size)).fetchall()
+            # 1. Deduct Product Recipe Ingredients
+            recipes = cursor.execute('''
+                SELECT pr.raw_material_id, pr.quantity_used, pr.for_size, rm.name_km, rm.current_stock, rm.unit
+                FROM product_recipes pr
+                JOIN raw_materials rm ON pr.raw_material_id = rm.id
+                WHERE pr.product_id = ? AND (pr.for_size = ? OR pr.for_size = 'ALL')
+            ''', (prod_id, size)).fetchall()
 
-        for rec in recipes:
-            deduct_qty = float(rec['quantity_used']) * qty
-            new_stock = float(rec['current_stock']) - deduct_qty
-            
-            cursor.execute('''
-                UPDATE raw_materials 
-                SET current_stock = ?, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = ?
-            ''', (new_stock, rec['raw_material_id']))
+            for rec in recipes:
+                deduct_qty = float(rec['quantity_used']) * qty
+                new_stock = float(rec['current_stock']) - deduct_qty
+                
+                cursor.execute('''
+                    UPDATE raw_materials 
+                    SET current_stock = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                ''', (new_stock, rec['raw_material_id']))
 
-            cursor.execute('''
-                INSERT INTO stock_logs (raw_material_id, change_type, quantity_changed, balance_after, reference_id, notes, created_by)
-                VALUES (?, 'sale_deduct', ?, ?, ?, ?, ?)
-            ''', (rec['raw_material_id'], -deduct_qty, new_stock, f"Order #{order_id}", f"កាត់សម្រាប់ {item.get('product_name')} x{qty}", cashier_name))
+                cursor.execute('''
+                    INSERT INTO stock_logs (raw_material_id, change_type, quantity_changed, balance_after, reference_id, notes, created_by)
+                    VALUES (?, 'sale_deduct', ?, ?, ?, ?, ?)
+                ''', (rec['raw_material_id'], -deduct_qty, new_stock, f"Order #{order_id}", f"កាត់សម្រាប់ {item.get('product_name')} x{qty}", cashier_name))
 
-        # 2. Deduct Toppings Ingredients
-        for top in toppings:
-            top_id = top.get('id') or top.get('topping_id')
-            if top_id:
-                top_row = cursor.execute('''
-                    SELECT t.raw_material_id, t.deduction_amount, rm.current_stock, rm.name_km
-                    FROM toppings t
-                    JOIN raw_materials rm ON t.raw_material_id = rm.id
-                    WHERE t.id = ? AND t.raw_material_id IS NOT NULL
-                ''', (top_id,)).fetchone()
+            # 2. Deduct Toppings Ingredients
+            for top in toppings:
+                top_id = top.get('id') or top.get('topping_id')
+                if top_id:
+                    top_row = cursor.execute('''
+                        SELECT t.raw_material_id, t.deduction_amount, rm.current_stock, rm.name_km
+                        FROM toppings t
+                        JOIN raw_materials rm ON t.raw_material_id = rm.id
+                        WHERE t.id = ? AND t.raw_material_id IS NOT NULL
+                    ''', (top_id,)).fetchone()
 
-                if top_row and top_row['deduction_amount'] > 0:
-                    deduct_qty = float(top_row['deduction_amount']) * qty
-                    new_stock = float(top_row['current_stock']) - deduct_qty
+                    if top_row and top_row['deduction_amount'] > 0:
+                        deduct_qty = float(top_row['deduction_amount']) * qty
+                        new_stock = float(top_row['current_stock']) - deduct_qty
 
-                    cursor.execute('''
-                        UPDATE raw_materials 
-                        SET current_stock = ?, updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = ?
-                    ''', (new_stock, top_row['raw_material_id']))
+                        cursor.execute('''
+                            UPDATE raw_materials 
+                            SET current_stock = ?, updated_at = CURRENT_TIMESTAMP 
+                            WHERE id = ?
+                        ''', (new_stock, top_row['raw_material_id']))
 
-                    cursor.execute('''
-                        INSERT INTO stock_logs (raw_material_id, change_type, quantity_changed, balance_after, reference_id, notes, created_by)
-                        VALUES (?, 'sale_deduct', ?, ?, ?, ?, ?)
-                    ''', (top_row['raw_material_id'], -deduct_qty, new_stock, f"Order #{order_id}", f"កាត់ Topping: {top.get('name_km', 'Topping')} x{qty}", cashier_name))
+                        cursor.execute('''
+                            INSERT INTO stock_logs (raw_material_id, change_type, quantity_changed, balance_after, reference_id, notes, created_by)
+                            VALUES (?, 'sale_deduct', ?, ?, ?, ?, ?)
+                        ''', (top_row['raw_material_id'], -deduct_qty, new_stock, f"Order #{order_id}", f"កាត់ Topping: {top.get('name_km', 'Topping')} x{qty}", cashier_name))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] deduct_inventory_for_order: {e}")
 
 def get_low_stock_alerts():
-    conn = get_db()
-    alerts = conn.execute('''
-        SELECT id, name_km, name_en, unit, current_stock, min_threshold,
-               CASE 
-                   WHEN current_stock <= 0 THEN 'danger'
-                   WHEN current_stock <= min_threshold THEN 'warning'
-                   ELSE 'ok'
-               END as status
-        FROM raw_materials
-        WHERE current_stock <= min_threshold
-        ORDER BY current_stock ASC
-    ''').fetchall()
-    conn.close()
-    return [dict(row) for row in alerts]
+    try:
+        conn = get_db()
+        alerts = conn.execute('''
+            SELECT id, name_km, name_en, unit, current_stock, min_threshold,
+                   CASE 
+                       WHEN current_stock <= 0 THEN 'danger'
+                       WHEN current_stock <= min_threshold THEN 'warning'
+                       ELSE 'ok'
+                   END as status
+            FROM raw_materials
+            WHERE current_stock <= min_threshold
+            ORDER BY current_stock ASC
+        ''').fetchall()
+        conn.close()
+        return [dict(row) for row in alerts]
+    except Exception as e:
+        print(f"[Warning] get_low_stock_alerts: {e}")
+        return []
 
 if __name__ == '__main__':
     init_db()

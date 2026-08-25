@@ -102,9 +102,13 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
-        conn = get_db()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND is_active = 1', (username,)).fetchone()
-        conn.close()
+        user = None
+        try:
+            conn = get_db()
+            user = conn.execute('SELECT * FROM users WHERE username = ? AND is_active = 1', (username,)).fetchone()
+            conn.close()
+        except Exception as e:
+            print(f"[Warning] Login DB error: {e}")
 
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
@@ -113,15 +117,18 @@ def login():
             session['role'] = user['role']
 
             # Auto-open shift if cashier doesn't have an open shift
-            shift = get_current_shift(user['id'])
-            if not shift and user['role'] == 'cashier':
-                conn = get_db()
-                conn.execute('''
-                    INSERT INTO shifts (cashier_id, opening_float_usd, opening_float_khr, status, notes)
-                    VALUES (?, 0.0, 0.0, 'open', 'បានបើកវេនដោយស្វ័យប្រវត្តិនៅពេល Login')
-                ''', (user['id'],))
-                conn.commit()
-                conn.close()
+            try:
+                shift = get_current_shift(user['id'])
+                if not shift and user['role'] == 'cashier':
+                    conn = get_db()
+                    conn.execute('''
+                        INSERT INTO shifts (cashier_id, opening_float_usd, opening_float_khr, status, notes)
+                        VALUES (?, 0.0, 0.0, 'open', 'បានបើកវេនដោយស្វ័យប្រវត្តិនៅពេល Login')
+                    ''', (user['id'],))
+                    conn.commit()
+                    conn.close()
+            except Exception as ex:
+                print(f"[Warning] Shift auto-open: {ex}")
 
             next_url = request.args.get('next')
             return redirect(next_url or url_for('pos_page'))
@@ -140,12 +147,18 @@ def logout():
 @app.route('/')
 @login_required
 def pos_page():
-    conn = get_db()
-    categories = conn.execute('SELECT * FROM categories ORDER BY sort_order ASC').fetchall()
-    toppings = conn.execute('SELECT * FROM toppings WHERE is_available = 1 ORDER BY price ASC').fetchall()
-    conn.close()
-    
-    current_shift = get_current_shift(session.get('user_id'))
+    categories = []
+    toppings = []
+    current_shift = None
+    try:
+        conn = get_db()
+        categories = conn.execute('SELECT * FROM categories ORDER BY sort_order ASC').fetchall()
+        toppings = conn.execute('SELECT * FROM toppings WHERE is_available = 1 ORDER BY price ASC').fetchall()
+        conn.close()
+        current_shift = get_current_shift(session.get('user_id'))
+    except Exception as e:
+        print(f"[Warning] pos_page error: {e}")
+        
     return render_template('pos.html', categories=categories, toppings=toppings, shift=current_shift)
 
 @app.route('/api/pos/products', methods=['GET'])
