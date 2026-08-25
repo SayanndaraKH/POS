@@ -424,15 +424,25 @@ def void_order(order_id):
 @app.route('/shifts')
 @login_required
 def shifts_page():
-    conn = get_db()
-    shifts = conn.execute('''
-        SELECT s.*, u.full_name as cashier_name
-        FROM shifts s
-        JOIN users u ON s.cashier_id = u.id
-        ORDER BY s.id DESC LIMIT 30
-    ''').fetchall()
-    conn.close()
-    current_shift = get_current_shift(session.get('user_id'))
+    shifts = []
+    current_shift = None
+    try:
+        conn = get_db()
+        shifts = conn.execute('''
+            SELECT s.*, u.full_name as cashier_name
+            FROM shifts s
+            LEFT JOIN users u ON s.cashier_id = u.id
+            ORDER BY s.id DESC LIMIT 30
+        ''').fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] shifts_page error: {e}")
+
+    try:
+        current_shift = get_current_shift(session.get('user_id'))
+    except Exception:
+        pass
+
     return render_template('shifts.html', shifts=shifts, current_shift=current_shift)
 
 @app.route('/api/shift/open', methods=['POST'])
@@ -486,30 +496,58 @@ def close_shift():
 @app.route('/inventory')
 @admin_required
 def inventory_page():
-    conn = get_db()
-    materials = conn.execute('SELECT * FROM raw_materials ORDER BY current_stock <= min_threshold DESC, name_km ASC').fetchall()
-    categories = conn.execute('SELECT * FROM categories ORDER BY sort_order ASC').fetchall()
-    products = conn.execute('''
-        SELECT p.*, c.name_km as category_name
-        FROM products p
-        JOIN categories c ON p.category_id = c.id
-        ORDER BY p.category_id ASC, p.id ASC
-    ''').fetchall()
-    toppings = conn.execute('''
-        SELECT t.*, rm.name_km as material_name, rm.unit as material_unit
-        FROM toppings t
-        LEFT JOIN raw_materials rm ON t.raw_material_id = rm.id
-        ORDER BY t.id ASC
-    ''').fetchall()
-    stock_logs = conn.execute('''
-        SELECT sl.*, rm.name_km as material_name, rm.unit
-        FROM stock_logs sl
-        JOIN raw_materials rm ON sl.raw_material_id = rm.id
-        ORDER BY sl.id DESC LIMIT 50
-    ''').fetchall()
-    conn.close()
+    materials = []
+    categories = []
+    products = []
+    toppings = []
+    stock_logs = []
+    alerts = []
+    try:
+        conn = get_db()
+        try:
+            materials = conn.execute('SELECT * FROM raw_materials ORDER BY name_km ASC').fetchall()
+        except Exception:
+            pass
+        try:
+            categories = conn.execute('SELECT * FROM categories ORDER BY sort_order ASC').fetchall()
+        except Exception:
+            pass
+        try:
+            products = conn.execute('''
+                SELECT p.*, c.name_km as category_name
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                ORDER BY p.category_id ASC, p.id ASC
+            ''').fetchall()
+        except Exception:
+            pass
+        try:
+            toppings = conn.execute('''
+                SELECT t.*, rm.name_km as material_name, rm.unit as material_unit
+                FROM toppings t
+                LEFT JOIN raw_materials rm ON t.raw_material_id = rm.id
+                ORDER BY t.id ASC
+            ''').fetchall()
+        except Exception:
+            pass
+        try:
+            stock_logs = conn.execute('''
+                SELECT sl.*, rm.name_km as material_name, rm.unit
+                FROM stock_logs sl
+                LEFT JOIN raw_materials rm ON sl.raw_material_id = rm.id
+                ORDER BY sl.id DESC LIMIT 50
+            ''').fetchall()
+        except Exception:
+            pass
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] inventory_page error: {e}")
 
-    alerts = get_low_stock_alerts()
+    try:
+        alerts = get_low_stock_alerts()
+    except Exception:
+        alerts = []
+
     return render_template(
         'inventory.html',
         materials=materials,
@@ -1061,10 +1099,20 @@ def export_orders_csv():
 @app.route('/settings')
 @admin_required
 def settings_page():
-    conn = get_db()
-    users = conn.execute('SELECT id, username, full_name, role, is_active, created_at FROM users').fetchall()
-    conn.close()
-    settings = get_store_settings()
+    users = []
+    settings = {}
+    try:
+        conn = get_db()
+        users = conn.execute('SELECT id, username, full_name, role, is_active, created_at FROM users').fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] settings_page error: {e}")
+
+    try:
+        settings = get_store_settings()
+    except Exception:
+        pass
+
     return render_template('settings.html', users=users, settings=settings)
 
 @app.route('/api/settings/update', methods=['POST'])
