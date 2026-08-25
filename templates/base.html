@@ -144,6 +144,11 @@
           osc.start();
           osc.stop(audioCtx.currentTime + 0.3);
         }
+      } catch (e) {
+        console.warn('Audio play prevented', e);
+      }
+    }
+
     function togglePasswordVisibility(inputId, btn) {
       const input = document.getElementById(inputId);
       if (!input) return;

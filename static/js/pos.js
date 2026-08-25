@@ -170,38 +170,45 @@ function confirmAddToCart() {
 
   const selectedSize = document.querySelector('input[name="size"]:checked');
   const sizeCode = selectedSize ? selectedSize.value : 'M';
-  const sizeName = selectedSize ? selectedSize.dataset.name : 'M';
-  const sizeExtra = selectedSize ? parseFloat(selectedSize.dataset.extra || 0) : 0;
+  const sizeName = selectedSize ? (selectedSize.dataset.name || selectedSize.value) : 'កែវធម្មតា (M)';
+  const sizeExtra = selectedSize ? (parseFloat(selectedSize.dataset.extra) || 0) : 0;
 
-  const sugar = document.querySelector('input[name="sugar"]:checked').value;
-  const ice = document.querySelector('input[name="ice"]:checked').value;
-  const notes = document.getElementById('customItemNotes').value.trim();
+  const sugarEl = document.querySelector('input[name="sugar"]:checked');
+  const sugar = sugarEl ? sugarEl.value : '100% (ធម្មតា)';
+
+  const iceEl = document.querySelector('input[name="ice"]:checked');
+  const ice = iceEl ? iceEl.value : 'ទឹកកកពេញ (100%)';
+
+  const notesEl = document.getElementById('customItemNotes');
+  const notes = notesEl ? notesEl.value.trim() : '';
 
   const selectedToppings = [];
   document.querySelectorAll('.topping-checkbox-card input:checked').forEach(cb => {
     selectedToppings.push({
       id: parseInt(cb.value),
-      name_km: cb.dataset.name,
+      name_km: cb.dataset.name || 'Topping',
       price: parseFloat(cb.dataset.price || 0)
     });
   });
 
-  const itemUnitPrice = currentProduct.base_price + sizeExtra;
+  const basePrice = parseFloat(currentProduct.base_price) || 0;
+  const itemUnitPrice = basePrice + sizeExtra;
+  const qty = customQty > 0 ? customQty : 1;
 
   // Build cart item object
   const cartItem = {
-    cart_item_id: Date.now() + Math.random(),
+    cart_item_id: Date.now() + Math.floor(Math.random() * 1000),
     product_id: currentProduct.id,
     product_name: currentProduct.name_km,
-    product_name_en: currentProduct.name_en,
-    code: currentProduct.code,
+    product_name_en: currentProduct.name_en || '',
+    code: currentProduct.code || 'DRINK',
     size: sizeCode,
     size_name: sizeName,
     sugar_level: sugar,
     ice_level: ice,
     toppings: selectedToppings,
     unit_price: itemUnitPrice,
-    quantity: customQty,
+    quantity: qty,
     notes: notes
   };
 
@@ -221,7 +228,14 @@ function confirmAddToCart() {
     cart.push(cartItem);
   }
 
-  playBeep('add');
+  try {
+    if (typeof playBeep === 'function') {
+      playBeep('add');
+    }
+  } catch (e) {
+    console.warn('Audio feedback error:', e);
+  }
+
   closeCustomModal();
   renderCart();
 }
