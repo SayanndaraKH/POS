@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="classicBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <linearGradient id="classicTea" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="24" fill="url(#classicBg)"/>
+  <rect x="110" y="25" width="14" height="90" rx="7" transform="rotate(12 120 70)" fill="#78350f" stroke="#fff" stroke-width="2"/>
+  <path d="M65 75 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L175 75 Z" fill="url(#classicTea)" stroke="#d97706" stroke-width="3"/>
+  <!-- Pearls -->
+  <circle cx="95" cy="188" r="9" fill="#1c1917"/>
+  <circle cx="118" cy="190" r="10" fill="#1c1917"/>
+  <circle cx="142" cy="186" r="9.5" fill="#1c1917"/>
+  <circle cx="106" cy="172" r="8.5" fill="#292524"/>
+  <circle cx="130" cy="170" r="9" fill="#292524"/>
+  <ellipse cx="120" cy="75" rx="55" ry="10" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+</svg>

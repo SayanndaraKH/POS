@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ប្រព័ន្ធគ្រប់គ្រងការលក់តែគុជ និងភេសជ្ជៈ - Sros Sray Boba POS{% endblock %}</title>
+  
+  <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Main Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+  
+  <!-- Chart.js for Reports & Dashboards -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  {% if current_user %}
+  <!-- Top Navigation Bar -->
+  <nav class="navbar">
+    <a href="{{ url_for('pos_page') }}" class="nav-brand">
+      <img src="{{ url_for('static', filename='images/shop_logo.svg') }}" alt="Logo" class="nav-logo">
+      <div>
+        <div class="brand-title">{{ settings.get('shop_name_km', 'ហាងតែគុជ ស្រស់ស្រាយ') }}</div>
+        <div class="brand-subtitle">{{ settings.get('shop_name_en', 'Sros Sray Boba & Beverage') }}</div>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <a href="{{ url_for('pos_page') }}" class="nav-item {% if request.endpoint == 'pos_page' %}active{% endif %}">
+        <i data-lucide="layout-grid"></i> ផ្ទាំងលក់ (POS)
+      </a>
+
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint == 'inventory_page' %}active{% endif %}">
+        <i data-lucide="package"></i> ស្តុកទំនិញ (Inventory)
+      </a>
+      <a href="{{ url_for('reports_page') }}" class="nav-item {% if request.endpoint == 'reports_page' %}active{% endif %}">
+        <i data-lucide="bar-chart-3"></i> របាយការណ៍ (Reports)
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('shifts_page') }}" class="nav-item {% if request.endpoint == 'shifts_page' %}active{% endif %}">
+        <i data-lucide="wallet"></i> វេនលក់ (Shifts)
+      </a>
+
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('settings_page') }}" class="nav-item {% if request.endpoint == 'settings_page' %}active{% endif %}">
+        <i data-lucide="settings"></i> ការកំណត់ (Settings)
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="nav-actions">
+      {% if low_stock_count > 0 and current_user.role == 'admin' %}
+      <a href="{{ url_for('inventory_page') }}" class="badge-alert" title="មានមុខទំនិញជិតអស់ពីស្តុក!">
+        <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+        <span>ជិតអស់ស្តុក ({{ low_stock_count }})</span>
+      </a>
+      {% endif %}
+
+      <div class="user-profile">
+        <div class="user-avatar">
+          {{ current_user.full_name[:1] }}
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ current_user.full_name }}</div>
+          <span class="user-role role-{{ current_user.role }}">{{ current_user.role }}</span>
+        </div>
+      </div>
+
+      <a href="{{ url_for('logout') }}" class="btn-logout" title="ចាកចេញ">
+        <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+      </a>
+    </div>
+  </nav>
+  {% endif %}
+
+  <!-- Flash Messages Banner -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="max-width:1200px; margin: 10px auto 0 auto; padding: 0 1.5rem;">
+        {% for category, message in messages %}
+          <div style="padding:10px 16px; border-radius:8px; margin-bottom:8px; font-weight:600; font-size:0.9rem; display:flex; align-items:center; gap:8px;
+            {% if category == 'danger' %}background:#fee2e2; color:#b91c1c; border:1px solid #f87171;
+            {% elif category == 'success' %}background:#dcfce7; color:#15803d; border:1px solid #86efac;
+            {% else %}background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc;{% endif %}">
+            <i data-lucide="info" style="width:18px;height:18px;"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Main Content Body -->
+  <main class="main-wrapper">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Global Receipt Container for Printing -->
+  <div id="receiptPrintArea" style="display:none;"></div>
+
+  <script>
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+
+    // Web Audio POS Beep Synthesizer
+    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+    function playBeep(type = 'add') {
+      if (!audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        if (type === 'add') {
+          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'success') {
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.3);
+        }
+      } catch (e) {
+        console.warn('Audio play prevented', e);
+      }
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

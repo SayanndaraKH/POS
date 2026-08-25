@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%">
+  <rect width="240" height="240" rx="24" fill="#ecfdf5"/>
+  <rect x="110" y="25" width="14" height="90" rx="7" transform="rotate(12 120 70)" fill="#10b981" stroke="#fff" stroke-width="2"/>
+  <path d="M65 75 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L175 75 Z" fill="#059669" stroke="#047857" stroke-width="3"/>
+  <!-- Cheese foam layer -->
+  <path d="M65 75 L68 115 Q120 120 172 115 L175 75 Z" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <ellipse cx="120" cy="75" rx="55" ry="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="3"/>
+</svg>

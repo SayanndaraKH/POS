@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="100%" stop-color="#fef3c7"/>
+    </linearGradient>
+    <linearGradient id="milk" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="sugarStreak" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="24" fill="url(#bg)"/>
+  <!-- Straw -->
+  <rect x="110" y="25" width="14" height="90" rx="7" transform="rotate(12 120 70)" fill="#d97706" stroke="#fff" stroke-width="2"/>
+  <!-- Cup Body -->
+  <path d="M65 75 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L175 75 Z" fill="url(#milk)" stroke="#f59e0b" stroke-width="3"/>
+  <!-- Brown Sugar dripping effects -->
+  <path d="M72 120 Q85 140 90 190 L150 190 Q155 130 168 110 Q145 135 120 120 Q95 145 72 120 Z" fill="url(#sugarStreak)" opacity="0.9"/>
+  <!-- Boba Pearls -->
+  <circle cx="95" cy="188" r="9" fill="#1c1917" stroke="#451a03" stroke-width="1.5"/>
+  <circle cx="118" cy="190" r="10" fill="#1c1917" stroke="#451a03" stroke-width="1.5"/>
+  <circle cx="142" cy="186" r="9.5" fill="#1c1917" stroke="#451a03" stroke-width="1.5"/>
+  <circle cx="106" cy="172" r="8.5" fill="#292524"/>
+  <circle cx="130" cy="170" r="9" fill="#292524"/>
+  <!-- Cup Rim -->
+  <ellipse cx="120" cy="75" rx="55" ry="10" fill="#ffffff" stroke="#f59e0b" stroke-width="3"/>
+  <!-- Ice cubes -->
+  <rect x="90" y="85" width="22" height="22" rx="4" fill="#ffffff" opacity="0.6" transform="rotate(15 100 95)"/>
+  <rect x="125" y="90" width="20" height="20" rx="4" fill="#ffffff" opacity="0.6" transform="rotate(-10 135 100)"/>
+</svg>

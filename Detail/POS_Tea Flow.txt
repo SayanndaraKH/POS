@@ -1,0 +1,24 @@
+POS_Tea/
+├── app.py                     # កម្មវិធី Flask Server & Routes
+├── database.py                # SQLite Schema, Models & Seed Data
+├── auth.py                    # Login, Authentication, Roles & Session
+├── static/
+│   ├── css/
+│   │   ├── style.css          # Modern UI Theme, Glassmorphism, Responsive
+│   │   └── print.css          # Thermal Printer 80mm/58mm Formatting
+│   ├── js/
+│   │   ├── pos.js             # Real-time Order Cart, Customization Modal, Checkout
+│   │   ├── inventory.js       # Inventory CRUD, Stock In, Low-stock indicators
+│   │   ├── reports.js         # Chart.js Integration, DataGridView, Filtering, Export
+│   │   └── settings.js        # User management, Backup/Restore, Store Config
+│   └── images/                # Drink images, Logo, KHQR placeholder
+├── templates/
+│   ├── base.html              # Layout Master with Navbar, Alerts & Sound
+│   ├── login.html             # Login Page (Cashier / Admin)
+│   ├── pos.html               # Main Point of Sale Screen
+│   ├── inventory.html         # Inventory & Product Management
+│   ├── reports.html           # Sales Reports & DataGridView
+│   ├── shifts.html            # Shift Management (Open/Close Drawer)
+│   └── settings.html          # Store Settings, Users, Backup & Restore
+├── requirements.txt           # Python dependencies
+└── run.bat                    # 1-Click Launch Script សម្រាប់ Windows

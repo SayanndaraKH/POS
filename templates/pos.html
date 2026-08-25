@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}ផ្ទាំងលក់ និងបញ្ជាទិញ (POS) - {{ settings.get('shop_name_km') }}{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+  
+  <!-- LEFT: Menu & Beverage Selection -->
+  <div class="pos-menu-section">
+    <!-- Top Search & Quick Shift Bar -->
+    <div class="pos-topbar">
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" id="drinkSearchInput" class="search-input" placeholder="ស្វែងរកភេសជ្ជៈ ឬកូដ..." oninput="handleSearch()">
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="shift-status-pill">
+          <i data-lucide="clock" style="width:16px;height:16px;"></i>
+          <span>វេនលក់ #{{ shift.id if shift else 'N/A' }}</span>
+        </div>
+        <div style="font-size:0.85rem; font-weight:700; color:#065f46; background:#ecfdf5; padding:6px 12px; border-radius:999px;">
+          1$ = <span id="currentExchangeRate">{{ settings.get('exchange_rate', 4100) }}</span> ៛
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div class="category-tabs">
+      <button class="category-pill active" onclick="selectCategory('all', this)">
+        <i data-lucide="sparkles" style="width:16px;height:16px;"></i> ទាំងអស់ (All)
+      </button>
+      {% for cat in categories %}
+      <button class="category-pill" onclick="selectCategory('{{ cat.id }}', this)">
+        <i data-lucide="{{ cat.icon }}" style="width:16px;height:16px;"></i> {{ cat.name_km }}
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid-container">
+      <div id="productsGrid" class="products-grid">
+        <!-- Dynamically loaded via JavaScript -->
+        <div style="grid-column: 1 / -1; text-align:center; padding:3rem; color:#94a3b8;">
+          <i data-lucide="loader-2" class="spin" style="width:36px;height:36px;margin-bottom:8px;"></i>
+          <div>កំពុងផ្ទុកបញ្ជីភេសជ្ជៈ...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Order Cart & Bill Checkout -->
+  <div class="pos-cart-section">
+    <div class="cart-header">
+      <div class="cart-title">
+        <i data-lucide="shopping-cart" style="width:20px;height:20px;color:var(--primary);"></i>
+        <span>បញ្ជីកុម្ម៉ង់ (Order Cart)</span>
+        <span id="cartCountBadge" class="badge badge-success" style="border-radius:999px;">0</span>
+      </div>
+      <button class="btn-clear-cart" onclick="clearCart()" title="សម្អាតបញ្ជី">
+        <i data-lucide="trash-2" style="width:15px;height:15px;"></i> លុបទាំងអស់
+      </button>
+    </div>
+
+    <!-- Cart Items Scroll List -->
+    <div id="cartItemsList" class="cart-items-list">
+      <div class="cart-empty-state">
+        <i data-lucide="cup-soda"></i>
+        <div style="font-weight:700; font-size:0.95rem; color:#64748b;">មិនទាន់មានភេសជ្ជៈក្នុងកន្ត្រកទេ</div>
+        <div style="font-size:0.8rem; color:#94a3b8;">សូមចុចលើភេសជ្ជៈខាងឆ្វេងដើម្បីជ្រើសរើស</div>
+      </div>
+    </div>
+
+    <!-- Bill Summary & Checkout Button -->
+    <div class="cart-footer">
+      <div class="bill-row">
+        <span>តម្លៃសរុប (Subtotal):</span>
+        <span id="cartSubtotalUsd" style="font-weight:700;">$0.00</span>
+      </div>
+      
+      <div class="bill-row" style="cursor:pointer;" onclick="toggleDiscountInput()">
+        <span style="display:flex;align-items:center;gap:4px;color:#b45309;">
+          <i data-lucide="tag" style="width:14px;height:14px;"></i> បញ្ចុះតម្លៃ (Discount):
+        </span>
+        <span id="cartDiscountUsd" style="font-weight:700;color:#b45309;">-$0.00</span>
+      </div>
+
+      <div id="discountInputRow" style="display:none; margin-bottom:8px;">
+        <input type="number" id="discountValInput" class="form-control" placeholder="បញ្ចុះតម្លៃជា USD ($)" step="0.05" min="0" oninput="updateCartTotals()" style="padding:6px 10px; font-size:0.85rem;">
+      </div>
+
+      <div class="bill-row total-row">
+        <span>សរុបត្រូវបង់:</span>
+        <span id="cartTotalUsd" class="total-usd-highlight">$0.00</span>
+      </div>
+      <div id="cartTotalKhr" class="total-khr-highlight">≈ 0 ៛</div>
+
+      <button id="btnPay" class="btn-checkout" onclick="openCheckoutModal()" disabled>
+        <i data-lucide="credit-card" style="width:20px;height:20px;"></i>
+        <span>គិតប្រាក់ (Pay Now)</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== DRINK CUSTOMIZATION MODAL ==================== -->
+<div id="customModal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div>
+        <div id="customDrinkTitleKm" class="modal-title">ឈ្មោះភេសជ្ជៈ</div>
+        <div id="customDrinkTitleEn" style="font-size:0.75rem; color:#64748b;">Drink English Name</div>
+      </div>
+      <button class="btn-close-modal" onclick="closeCustomModal()">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      
+      <!-- Size Selection -->
+      <div>
+        <div class="opt-group-label"><i data-lucide="maximize-2" style="width:15px;height:15px;"></i> ទំហំកែវ (Size)</div>
+        <div id="sizeOptionsGrid" class="opt-pill-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Sugar Level -->
+      <div>
+        <div class="opt-group-label"><i data-lucide="droplet" style="width:15px;height:15px;color:#f59e0b;"></i> កម្រិតជាតិស្ករ (Sugar Level)</div>
+        <div class="opt-pill-grid">
+          <div class="opt-radio-pill">
+            <input type="radio" name="sugar" id="s0" value="0%">
+            <label for="s0">0% (មិនស្ករ)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="sugar" id="s25" value="25%">
+            <label for="s25">25% (ស្ទើរ)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="sugar" id="s50" value="50%">
+            <label for="s50">50% (មធ្យម)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="sugar" id="s75" value="75%">
+            <label for="s75">75% (ផ្អែមល្មម)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="sugar" id="s100" value="100%" checked>
+            <label for="s100">100% (ធម្មតា)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ice Level -->
+      <div>
+        <div class="opt-group-label"><i data-lucide="snowflake" style="width:15px;height:15px;color:#0ea5e9;"></i> កម្រិតទឹកកក (Ice Level)</div>
+        <div class="opt-pill-grid">
+          <div class="opt-radio-pill">
+            <input type="radio" name="ice" id="i0" value="គ្មានទឹកកក (0%)">
+            <label for="i0">គ្មានទឹកកក (0%)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="ice" id="i50" value="ទឹកកកតិច (50%)">
+            <label for="i50">ទឹកកកតិច (50%)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="ice" id="i100" value="ទឹកកកពេញ (100%)" checked>
+            <label for="i100">ទឹកកកពេញ (100%)</label>
+          </div>
+          <div class="opt-radio-pill">
+            <input type="radio" name="ice" id="ihot" value="ក្តៅ (Hot)">
+            <label for="ihot">ភេសជ្ជៈក្តៅ 🔥</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toppings Selection -->
+      <div>
+        <div class="opt-group-label"><i data-lucide="plus-circle" style="width:15px;height:15px;color:#10b981;"></i> បន្ថែម Toppings ឈ្ងុយឆ្ងាញ់</div>
+        <div class="toppings-grid">
+          {% for top in toppings %}
+          <div class="topping-checkbox-card">
+            <input type="checkbox" id="top_{{ top.id }}" value="{{ top.id }}" data-name="{{ top.name_km }}" data-price="{{ top.price }}" onchange="recalculateCustomTotal()">
+            <label for="top_{{ top.id }}">
+              <span class="topping-name">{{ top.name_km }}</span>
+              <span class="topping-price">+${{ "%.2f"|format(top.price) }}</span>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Quantity & Item Notes -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid #e2e8f0;">
+        <div>
+          <div class="form-label">កំណត់ចំណាំពិសេស (Notes):</div>
+          <input type="text" id="customItemNotes" class="form-control" placeholder="ឧ. កែវដាច់ដោយឡែក..." style="width:240px; padding:6px 10px; font-size:0.85rem;">
+        </div>
+
+        <div style="text-align:right;">
+          <div class="form-label">បរិមាណ (Qty):</div>
+          <div class="qty-counter" style="margin-top:4px;">
+            <button type="button" class="btn-qty" onclick="changeCustomQty(-1)">-</button>
+            <span id="customQtyDisplay" class="qty-val">1</span>
+            <button type="button" class="btn-qty" onclick="changeCustomQty(1)">+</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <div style="margin-right:auto; display:flex; flex-direction:column;">
+        <span style="font-size:0.75rem; color:#64748b;">តម្លៃសរុបមុខនេះ:</span>
+        <span id="customTotalDisplay" style="font-size:1.3rem; font-weight:800; color:var(--primary);">$0.00</span>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="closeCustomModal()">បោះបង់</button>
+      <button type="button" class="btn btn-primary" onclick="confirmAddToCart()">
+        <i data-lucide="check"></i> ដាក់ចូលកន្ត្រក (Add to Cart)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CHECKOUT & PAYMENT MODAL ==================== -->
+<div id="checkoutModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:580px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i data-lucide="shield-check" style="width:20px;height:20px;color:var(--primary);"></i>
+        ទូទាត់ប្រាក់ (Checkout Order)
+      </div>
+      <button class="btn-close-modal" onclick="closeCheckoutModal()">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Total Display Banner -->
+      <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.8rem; color:#065f46; font-weight:700;">ទឹកប្រាក់សរុបត្រូវទូទាត់ (Grand Total):</div>
+          <div id="checkoutDueKhr" style="font-size:0.9rem; color:#047857; font-weight:600;">≈ 0 ៛</div>
+        </div>
+        <div id="checkoutDueUsd" style="font-size:1.8rem; font-weight:800; color:#065f46;">$0.00</div>
+      </div>
+
+      <!-- Payment Method Switch Tabs -->
+      <div class="checkout-tabs">
+        <button id="tabCashBtn" class="checkout-tab-btn active" onclick="switchPaymentMethod('cash')">
+          <i data-lucide="banknote" style="width:18px;height:18px;"></i> សាច់ប្រាក់ (Cash)
+        </button>
+        <button id="tabKhqrBtn" class="checkout-tab-btn" onclick="switchPaymentMethod('khqr')">
+          <i data-lucide="qr-code" style="width:18px;height:18px;"></i> ស្កេន KHQR (Bakong)
+        </button>
+      </div>
+
+      <!-- CASH PAYMENT CONTENT -->
+      <div id="cashPaymentContent">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="form-group">
+            <label class="form-label">ទទួលជាដុល្លារ ($ USD):</label>
+            <input type="number" id="cashReceivedUsd" class="form-control" placeholder="0.00" step="0.5" oninput="calculateChange()" style="font-size:1.1rem; font-weight:700; color:#0f172a;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ទទួលជារៀល (៛ KHR):</label>
+            <input type="number" id="cashReceivedKhr" class="form-control" placeholder="0" step="500" oninput="calculateChange()" style="font-size:1.1rem; font-weight:700; color:#0f172a;">
+          </div>
+        </div>
+
+        <!-- Quick Cash Pill Buttons -->
+        <div>
+          <div style="font-size:0.75rem; font-weight:700; color:#64748b; margin-bottom:4px;">ចុចលុយទទួលរហ័ស (Quick Cash USD):</div>
+          <div class="quick-cash-grid">
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash('exact')">✨ គ្រប់ចំនួន</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(2)">$2.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(5)">$5.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(10)">$10.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(20)">$20.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(50)">$50.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash(100)">$100.00</button>
+            <button type="button" class="btn-quick-cash" onclick="addQuickCash('clear')" style="color:#ef4444;">❌ លុប</button>
+          </div>
+        </div>
+
+        <!-- Change Output Box -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; margin-top:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; font-size:0.9rem; color:#475569;">ប្រាក់អាប់ត្រូវជូនអតិថិជន (Change):</span>
+            <div style="text-align:right;">
+              <div id="changeAmountUsd" style="font-size:1.4rem; font-weight:800; color:var(--primary);">$0.00</div>
+              <div id="changeAmountKhr" style="font-size:0.85rem; font-weight:700; color:#64748b;">0 ៛</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHQR PAYMENT CONTENT -->
+      <div id="khqrPaymentContent" style="display:none;">
+        <div class="khqr-card">
+          <div class="khqr-header-tag">KHQR • BAKONG</div>
+          <div class="khqr-merchant">{{ settings.get('khqr_merchant_name', 'SROS SRAY TEA') }}</div>
+          
+          <div class="khqr-box">
+            <img id="khqrLiveImg" src="{{ url_for('generate_qr_image') }}?text=https://bakong.nbc.org.kh" alt="KHQR Code" class="khqr-img">
+          </div>
+
+          <div id="khqrDisplayAmount" class="khqr-amount">$0.00 (≈ 0 ៛)</div>
+          <div style="font-size:0.75rem; opacity:0.9;">ស្កេនទូទាត់ជាមួយកម្មវិធីធនាគារនានាក្នុងប្រទេសកម្ពុជា</div>
+        </div>
+        
+        <div style="text-align:center; margin-top:10px;">
+          <button type="button" class="btn btn-secondary" onclick="simulateKhqrSuccess()" style="font-size:0.85rem; padding:6px 14px;">
+            ⚡ សាកល្បងថាអតិថិជនស្កេនជោគជ័យ (Simulate Payment)
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeCheckoutModal()">ត្រឡប់ក្រោយ</button>
+      <button type="button" id="btnSubmitOrder" class="btn btn-primary" onclick="submitFinalOrder()">
+        <i data-lucide="printer"></i> បញ្ចប់ការលក់ & បោះពុម្ពវិក្កយបត្រ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== RECEIPT PRINT PREVIEW MODAL ==================== -->
+<div id="receiptModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">វិក្កយបត្រ (Receipt)</div>
+      <button class="btn-close-modal" onclick="closeReceiptModal()">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding:1rem;">
+      <div id="receiptPreviewContent" class="receipt-paper">
+        <!-- Rendered by JavaScript -->
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeReceiptModal()">បិទ (Close)</button>
+      <button type="button" class="btn btn-primary" onclick="triggerPrintReceipt()">
+        <i data-lucide="printer"></i> បោះពុម្ព (Print)
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+{% endblock %}

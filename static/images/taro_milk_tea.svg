@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%">
+  <rect width="240" height="240" rx="24" fill="#faf5ff"/>
+  <rect x="110" y="25" width="14" height="90" rx="7" transform="rotate(12 120 70)" fill="#9333ea" stroke="#fff" stroke-width="2"/>
+  <path d="M65 75 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L175 75 Z" fill="#a855f7" stroke="#7e22ce" stroke-width="3"/>
+  <ellipse cx="120" cy="75" rx="55" ry="10" fill="#f3e8ff" stroke="#9333ea" stroke-width="3"/>
+  <!-- Pearls -->
+  <circle cx="95" cy="188" r="9" fill="#1c1917"/>
+  <circle cx="118" cy="190" r="10" fill="#1c1917"/>
+  <circle cx="142" cy="186" r="9.5" fill="#1c1917"/>
+</svg>

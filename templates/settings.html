@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}ការកំណត់ប្រព័ន្ធ និងគណនី - {{ settings.get('shop_name_km') }}{% endblock %}
+
+{% block content %}
+<div class="card-box">
+  
+  <div class="card-header-row">
+    <div>
+      <div class="card-title">
+        <i data-lucide="settings" style="width:24px;height:24px;color:var(--primary);"></i>
+        ការកំណត់ប្រព័ន្ធ និងគណនី (System Settings)
+      </div>
+      <div style="font-size:0.85rem; color:#64748b;">កំណត់ព័ត៌មានហាង អ្នកប្រើប្រាស់ និងការបម្រុងទុកទិន្នន័យ</div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:1.5rem; margin-top:1rem;">
+    
+    <!-- ==================== 1. STORE PROFILE SETTINGS ==================== -->
+    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; box-shadow:var(--shadow-sm);">
+      <div class="card-title" style="font-size:1.05rem; margin-bottom:1.2rem; color:#064e3b;">
+        <i data-lucide="store" style="width:20px;height:20px;color:var(--primary);"></i>
+        ព័ត៌មានហាង & អត្រាប្តូរប្រាក់ (Store Profile)
+      </div>
+
+      <form id="storeSettingsForm" onsubmit="saveStoreSettings(event)" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">ឈ្មោះហាងជាភាសាខ្មែរ *:</label>
+          <input type="text" id="setShopNameKm" class="form-control" value="{{ settings.get('shop_name_km', '') }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ឈ្មោះហាងជាភាសាអង់គ្លេស:</label>
+          <input type="text" id="setShopNameEn" class="form-control" value="{{ settings.get('shop_name_en', '') }}">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label class="form-label">លេខទូរស័ព្ទហាង:</label>
+            <input type="text" id="setShopPhone" class="form-control" value="{{ settings.get('shop_phone', '') }}">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">អត្រាប្តូរប្រាក់ (1$ = ? ៛) *:</label>
+            <input type="number" id="setExchangeRate" class="form-control" value="{{ settings.get('exchange_rate', '4100') }}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">អាសយដ្ឋានហាង:</label>
+          <input type="text" id="setShopAddress" class="form-control" value="{{ settings.get('shop_address', '') }}">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Bakong Account ID (KHQR):</label>
+            <input type="text" id="setBakongId" class="form-control" value="{{ settings.get('khqr_bakong_id', '') }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ឈ្មោះ Merchant (KHQR):</label>
+            <input type="text" id="setMerchantName" class="form-control" value="{{ settings.get('khqr_merchant_name', '') }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">សារចុងវិក្កយបត្រ (Receipt Footer):</label>
+          <input type="text" id="setReceiptFooter" class="form-control" value="{{ settings.get('receipt_footer_km', '') }}">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:8px;">
+          <i data-lucide="save"></i> រក្សាទុកការកំណត់ហាង
+        </button>
+      </form>
+    </div>
+
+    <!-- ==================== 2. BACKUP & RESTORE ==================== -->
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+      
+      <!-- Backup Box -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; box-shadow:var(--shadow-sm);">
+        <div class="card-title" style="font-size:1.05rem; margin-bottom:0.8rem; color:#1e293b;">
+          <i data-lucide="database-backup" style="width:20px;height:20px;color:#6366f1;"></i>
+          បម្រុងទុកទិន្នន័យ (Data Backup & Restore)
+        </div>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.2rem;">
+          ទាញយក Database Backup ទុកក្នុងកុំព្យូទ័ររបស់អ្នកដើម្បីសុវត្ថិភាព និងចៀសវាងការបាត់បង់ទិន្នន័យ។
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <a href="{{ url_for('download_backup') }}" class="btn btn-primary" style="background:#4f46e5;">
+            <i data-lucide="download"></i> ទាញយក Backup File (.db)
+          </a>
+
+          <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;">
+            <div class="form-label" style="margin-bottom:6px;">ស្តារទិន្នន័យឡើងវិញ (Restore Database):</div>
+            <form id="restoreForm" onsubmit="submitRestore(event)" style="display:flex; gap:8px;">
+              <input type="file" id="backupFileInput" name="backup_file" accept=".db" class="form-control" style="padding:6px; font-size:0.82rem;" required>
+              <button type="submit" class="btn btn-danger" style="white-space:nowrap; padding:8px 12px; font-size:0.82rem;">
+                <i data-lucide="upload-cloud"></i> Restore
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1.2rem;">
+        <div style="font-size:0.85rem; font-weight:700; color:#475569; margin-bottom:8px;">
+          ព័ត៌មានប្រព័ន្ធ (System Info):
+        </div>
+        <div style="font-size:0.8rem; color:#64748b; line-height:1.6;">
+          <div>• Python Engine: <strong>Python 3.12 (Flask + SQLite)</strong></div>
+          <div>• កាលបរិច្ឆេទប្រព័ន្ធ: <strong>{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</strong></div>
+          <div>• ស្ថានភាពម៉ាស៊ីនមេ: <span class="badge badge-success">Online (ដំណើរការល្អ)</span></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ==================== 3. USER MANAGEMENT (ACCOUNTS & ROLES) ==================== -->
+  <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid #e2e8f0;">
+    <div class="card-header-row">
+      <div class="card-title" style="font-size:1.1rem;">
+        <i data-lucide="users" style="width:22px;height:22px;color:var(--primary);"></i>
+        គ្រប់គ្រងគណនី និងសិទ្ធិប្រើប្រាស់ (User Management)
+      </div>
+
+      <button class="btn btn-primary" onclick="openAddUserModal()">
+        <i data-lucide="user-plus"></i> បន្ថែមគណនីថ្មី
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ឈ្មោះពេញ (Full Name)</th>
+            <th>ឈ្មោះគណនី (Username)</th>
+            <th>សិទ្ធិ (Role)</th>
+            <th>ស្ថានភាព</th>
+            <th>កាលបរិច្ឆេទបង្កើត</th>
+            <th style="text-align:right;">សកម្មភាព</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td><strong>{{ u.full_name }}</strong></td>
+            <td style="color:#64748b;"><code>{{ u.username }}</code></td>
+            <td>
+              <span class="user-role role-{{ u.role }}">{{ u.role }}</span>
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge badge-success">សកម្ម (Active)</span>
+              {% else %}
+                <span class="badge badge-danger">ផ្អាក (Inactive)</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.8rem; color:#64748b;">{{ u.created_at }}</td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.78rem;" onclick="openEditUserModal({{ u.id }}, '{{ u.full_name }}', '{{ u.username }}', '{{ u.role }}', {{ u.is_active }})" title="កែប្រែ">
+                <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+              </button>
+              {% if u.id != current_user.id %}
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.78rem;" onclick="deleteUser({{ u.id }}, '{{ u.full_name }}')" title="លុប">
+                <i data-lucide="trash" style="width:14px;height:14px;"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- USER MODAL (Add/Edit) -->
+<div id="userModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:440px;">
+    <div class="modal-header">
+      <div id="userModalTitle" class="modal-title">បន្ថែមគណនីថ្មី</div>
+      <button class="btn-close-modal" onclick="closeModal('userModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editUserId">
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះពេញ (Full Name) *:</label>
+        <input type="text" id="userFullName" class="form-control" placeholder="ឧ. សុខ ចាន់ដា" required>
+      </div>
+
+      <div class="form-group" id="usernameGroup">
+        <label class="form-label">ឈ្មោះគណនី (Username) *:</label>
+        <input type="text" id="userUsername" class="form-control" placeholder="ឧ. chanda" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">លេខសម្ងាត់ (Password) <span id="pwdHint" style="font-size:0.75rem; color:#94a3b8;"></span>:</label>
+        <input type="password" id="userPassword" class="form-control" placeholder="បញ្ចូលលេខសម្ងាត់">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">សិទ្ធិប្រើប្រាស់ (Role) *:</label>
+        <select id="userRole" class="form-control">
+          <option value="cashier">បុគ្គលិកគិតលុយ (Cashier)</option>
+          <option value="admin">អ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="userActiveGroup">
+        <label class="form-label">ស្ថានភាពគណនី:</label>
+        <select id="userActive" class="form-control">
+          <option value="1">អនុញ្ញាតឱ្យប្រើប្រាស់ (Active)</option>
+          <option value="0">ផ្អាកការប្រើប្រាស់ (Inactive)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('userModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitUserForm()"><i data-lucide="check"></i> រក្សាទុក</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  // Save Store Settings
+  async function saveStoreSettings(e) {
+    e.preventDefault();
+    const payload = {
+      shop_name_km: document.getElementById('setShopNameKm').value.trim(),
+      shop_name_en: document.getElementById('setShopNameEn').value.trim(),
+      shop_phone: document.getElementById('setShopPhone').value.trim(),
+      shop_address: document.getElementById('setShopAddress').value.trim(),
+      exchange_rate: document.getElementById('setExchangeRate').value.trim(),
+      khqr_bakong_id: document.getElementById('setBakongId').value.trim(),
+      khqr_merchant_name: document.getElementById('setMerchantName').value.trim(),
+      receipt_footer_km: document.getElementById('setReceiptFooter').value.trim()
+    };
+
+    try {
+      const res = await fetch('/api/settings/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការរក្សាទុកការកំណត់!');
+    }
+  }
+
+  // Restore Database
+  async function submitRestore(e) {
+    e.preventDefault();
+    if (!confirm('⚠️ ការ Restore នឹងជំនួសទិន្នន័យបច្ចុប្បន្នទាំងអស់ដោយទិន្នន័យពីឯកសារ Backup!\nតើអ្នកប្រាកដជាចង់បន្តមែនទេ?')) {
+      return;
+    }
+
+    const formData = new FormData(document.getElementById('restoreForm'));
+    try {
+      const res = await fetch('/api/backup/restore', {
+        method: 'POST',
+        body: formData
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(`កំហុស៖ ${result.error}`);
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការ Restore!');
+    }
+  }
+
+  // Users CRUD
+  function openAddUserModal() {
+    document.getElementById('editUserId').value = '';
+    document.getElementById('userModalTitle').innerText = 'បន្ថែមគណនីថ្មី';
+    document.getElementById('userFullName').value = '';
+    document.getElementById('userUsername').value = '';
+    document.getElementById('userUsername').disabled = false;
+    document.getElementById('usernameGroup').style.display = 'block';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('pwdHint').innerText = '*';
+    document.getElementById('userRole').value = 'cashier';
+    document.getElementById('userActiveGroup').style.display = 'none';
+    document.getElementById('userModal').classList.add('show');
+  }
+
+  function openEditUserModal(id, fullName, username, role, isActive) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('userModalTitle').innerText = 'កែប្រែគណនី';
+    document.getElementById('userFullName').value = fullName;
+    document.getElementById('userUsername').value = username;
+    document.getElementById('usernameGroup').style.display = 'none';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('pwdHint').innerText = '(ទុកទទេបើមិនចង់ប្តូរ)';
+    document.getElementById('userRole').value = role;
+    document.getElementById('userActive').value = isActive ? '1' : '0';
+    document.getElementById('userActiveGroup').style.display = 'block';
+    document.getElementById('userModal').classList.add('show');
+  }
+
+  async function submitUserForm() {
+    const editId = document.getElementById('editUserId').value;
+    const fullName = document.getElementById('userFullName').value.trim();
+    const username = document.getElementById('userUsername').value.trim();
+    const password = document.getElementById('userPassword').value.trim();
+    const role = document.getElementById('userRole').value;
+    const isActive = document.getElementById('userActive').value === '1';
+
+    if (!fullName || (!editId && (!username || !password))) {
+      alert('សូមបំពេញព័ត៌មានឱ្យបានគ្រប់ជ្រុងជ្រោយ!');
+      return;
+    }
+
+    const payload = {
+      full_name: fullName,
+      username: username,
+      password: password,
+      role: role,
+      is_active: isActive
+    };
+
+    try {
+      const url = editId ? `/api/users/${editId}` : '/api/users';
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(`កំហុស៖ ${result.error}`);
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការរក្សាទុកគណនី!');
+    }
+  }
+
+  async function deleteUser(id, name) {
+    if (confirm(`តើអ្នកប្រាកដជាចង់លុបគណនី "${name}" មែនទេ?`)) {
+      try {
+        const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.success) {
+          alert(result.message);
+          location.reload();
+        } else {
+          alert(result.error);
+        }
+      } catch (err) {
+        alert('បរាជ័យក្នុងការលុប!');
+      }
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}របាយការណ៍ និងស្ថិតិការលក់ - {{ settings.get('shop_name_km') }}{% endblock %}
+
+{% block content %}
+<!-- Top Header & Filter Controls -->
+<div class="card-box" style="padding:1.2rem; margin-bottom:1.2rem;">
+  <div class="card-header-row" style="margin-bottom:0.8rem;">
+    <div class="card-title">
+      <i data-lucide="bar-chart-3" style="width:24px;height:24px;color:var(--primary);"></i>
+      របាយការណ៍ និងស្ថិតិការលក់ (Reports & Analytics)
+    </div>
+
+    <!-- Export Buttons -->
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-secondary" onclick="exportReport('csv')">
+        <i data-lucide="file-text" style="width:16px;height:16px;"></i> ទាញយកជា CSV
+      </button>
+      <button class="btn btn-primary" onclick="exportReport('excel')">
+        <i data-lucide="sheet" style="width:16px;height:16px;"></i> ទាញយកជា Excel (.xlsx)
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; background:#f8fafc; padding:12px; border-radius:10px; border:1px solid #e2e8f0; align-items:flex-end;">
+    <div class="form-group">
+      <label class="form-label" style="font-size:0.78rem;">ចាប់ពីថ្ងៃ (Start Date):</label>
+      <input type="date" id="filterStartDate" class="form-control" style="padding:6px 10px; font-size:0.85rem;" onchange="applyFilters()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="font-size:0.78rem;">ដល់ថ្ងៃ (End Date):</label>
+      <input type="date" id="filterEndDate" class="form-control" style="padding:6px 10px; font-size:0.85rem;" onchange="applyFilters()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="font-size:0.78rem;">អ្នកគិតលុយ (Cashier):</label>
+      <select id="filterCashier" class="form-control" style="padding:6px 10px; font-size:0.85rem;" onchange="applyFilters()">
+        <option value="all">ទាំងអស់ (All)</option>
+        {% for c in cashiers %}
+        <option value="{{ c.id }}">{{ c.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="font-size:0.78rem;">វិធីទូទាត់ (Payment):</label>
+      <select id="filterPayment" class="form-control" style="padding:6px 10px; font-size:0.85rem;" onchange="applyFilters()">
+        <option value="all">ទាំងអស់ (All)</option>
+        <option value="cash">សាច់ប្រាក់ (Cash)</option>
+        <option value="khqr">ស្កេន KHQR (Bakong)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="font-size:0.78rem;">ស្ថានភាព (Status):</label>
+      <select id="filterStatus" class="form-control" style="padding:6px 10px; font-size:0.85rem;" onchange="applyFilters()">
+        <option value="all">ទាំងអស់ (All)</option>
+        <option value="completed">ជោគជ័យ (Completed)</option>
+        <option value="voided">បានលុបចោល (Voided)</option>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:6px;">
+      <button class="btn btn-secondary" style="padding:7px 12px; font-size:0.82rem; flex:1;" onclick="setQuickDate('today')">ថ្ងៃនេះ</button>
+      <button class="btn btn-secondary" style="padding:7px 12px; font-size:0.82rem; flex:1;" onclick="setQuickDate('month')">ខែនេះ</button>
+      <button class="btn btn-secondary" style="padding:7px 12px; font-size:0.82rem;" onclick="resetFilters()">🔄</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Summary Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon emerald">
+      <i data-lucide="dollar-sign" style="width:24px;height:24px;"></i>
+    </div>
+    <div>
+      <div id="kpiTodayUsd" class="kpi-val">$0.00</div>
+      <div id="kpiTodayKhr" style="font-size:0.75rem; font-weight:700; color:#059669;">0 ៛</div>
+      <div class="kpi-label">ចំណូលសរុបថ្ងៃនេះ (Today Sales)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon amber">
+      <i data-lucide="shopping-bag" style="width:24px;height:24px;"></i>
+    </div>
+    <div>
+      <div id="kpiTodayOrders" class="kpi-val">0</div>
+      <div class="kpi-label">ចំនួនវិក្កយបត្រថ្ងៃនេះ (Orders)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon indigo">
+      <i data-lucide="cup-soda" style="width:24px;height:24px;"></i>
+    </div>
+    <div>
+      <div id="kpiTodayCups" class="kpi-val">0</div>
+      <div class="kpi-label">ចំនួនកែវបានលក់ថ្ងៃនេះ (Cups Sold)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon rose">
+      <i data-lucide="calendar" style="width:24px;height:24px;"></i>
+    </div>
+    <div>
+      <div id="kpiMonthUsd" class="kpi-val">$0.00</div>
+      <div class="kpi-label">ចំណូលសរុបប្រចាំខែ (Month Sales)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Visual Charts Section (Chart.js) -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap:1.2rem; margin-bottom:1.5rem;">
+  
+  <!-- Chart 1: Top 5 Best Sellers -->
+  <div class="card-box" style="margin-bottom:0;">
+    <div class="card-title" style="font-size:1rem; margin-bottom:1rem;">
+      <i data-lucide="award" style="width:18px;height:18px;color:#f59e0b;"></i>
+      ភេសជ្ជៈលក់ដាច់ជាងគេទាំង ៥ (Top 5 Best Sellers)
+    </div>
+    <div style="height:260px; position:relative;">
+      <canvas id="topDrinksChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Sales by Category -->
+  <div class="card-box" style="margin-bottom:0;">
+    <div class="card-title" style="font-size:1rem; margin-bottom:1rem;">
+      <i data-lucide="pie-chart" style="width:18px;height:18px;color:#6366f1;"></i>
+      ចំណែកចំណូលតាមប្រភេទភេសជ្ជៈ (Category Breakdown)
+    </div>
+    <div style="height:260px; position:relative;">
+      <canvas id="categorySalesChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Advanced DataGridView Table -->
+<div class="card-box">
+  <div class="card-header-row">
+    <div class="card-title">
+      <i data-lucide="table" style="width:20px;height:20px;color:var(--primary);"></i>
+      តារាងទិន្នន័យវិក្កយបត្រ (Sales DataGridView)
+    </div>
+
+    <!-- Search & Limit -->
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="search-box" style="max-width:240px;">
+        <i data-lucide="search"></i>
+        <input type="text" id="gridSearchInput" class="search-input" placeholder="ស្វែងរកវិក្កយបត្រ..." oninput="handleGridSearch()">
+      </div>
+
+      <select id="gridLimitSelect" class="form-control" style="width:110px; padding:8px;" onchange="changeGridLimit()">
+        <option value="10">១០ ជួរ</option>
+        <option value="15" selected>១៥ ជួរ</option>
+        <option value="25">២៥ ជួរ</option>
+        <option value="50">៥០ ជួរ</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table View -->
+  <div class="table-responsive">
+    <table class="data-table" id="ordersGridTable">
+      <thead>
+        <tr>
+          <th>លេខវិក្កយបត្រ</th>
+          <th>កាលបរិច្ឆេទ & ម៉ោង</th>
+          <th>អ្នកគិតលុយ</th>
+          <th>វិធីទូទាត់</th>
+          <th>តម្លៃដើម ($)</th>
+          <th>បញ្ចុះតម្លៃ ($)</th>
+          <th>សរុបជា USD ($)</th>
+          <th>សរុបជារៀល (៛)</th>
+          <th>ស្ថានភាព</th>
+          <th style="text-align:right;">សកម្មភាព</th>
+        </tr>
+      </thead>
+      <tbody id="ordersGridTbody">
+        <!-- Loaded via AJAX -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Table Pagination & Totals Footer -->
+  <div class="pagination-wrap">
+    <div style="font-size:0.85rem; color:#64748b;">
+      បង្ហាញទិន្នន័យសរុប <strong id="gridTotalRecords">0</strong> ជួរ | 
+      ទឹកប្រាក់សរុបក្នុងការត្រង៖ <strong id="gridFilteredSumUsd" style="color:#059669;">$0.00</strong> 
+      (<strong id="gridFilteredSumKhr" style="color:#059669;">0 ៛</strong>)
+    </div>
+
+    <div class="pagination-btns" id="gridPaginationBtns">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Detail Modal -->
+<div id="reportReceiptModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">វិក្កយបត្រ (Receipt)</div>
+      <button class="btn-close-modal" onclick="closeModal('reportReceiptModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1rem;">
+      <div id="reportReceiptContent" class="receipt-paper">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('reportReceiptModal')">បិទ</button>
+      <button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer"></i> បោះពុម្ព</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

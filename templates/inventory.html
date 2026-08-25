@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងស្តុក និងមុខទំនិញ - {{ settings.get('shop_name_km') }}{% endblock %}
+
+{% block content %}
+<div class="card-box">
+  
+  <!-- Top Title & Tabs Header -->
+  <div class="card-header-row">
+    <div>
+      <div class="card-title">
+        <i data-lucide="boxes" style="width:24px;height:24px;color:var(--primary);"></i>
+        គ្រប់គ្រងស្តុក និងផលិតផល (Inventory & Products)
+      </div>
+      <div style="font-size:0.85rem; color:#64748b;">គ្រប់គ្រងវត្ថុធាតុដើម រូបមន្តកាត់ស្តុកស្វ័យប្រវត្តិ និងភេសជ្ជៈ</div>
+    </div>
+
+    <!-- Tab Buttons -->
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <button class="btn btn-primary inv-tab-btn active" onclick="switchInvTab('materials', this)">
+        <i data-lucide="package"></i> វត្ថុធាតុដើម ({{ materials|length }})
+      </button>
+      <button class="btn btn-secondary inv-tab-btn" onclick="switchInvTab('products', this)">
+        <i data-lucide="cup-soda"></i> ភេសជ្ជៈ ({{ products|length }})
+      </button>
+      <button class="btn btn-secondary inv-tab-btn" onclick="switchInvTab('toppings', this)">
+        <i data-lucide="sparkles"></i> Toppings ({{ toppings|length }})
+      </button>
+      <button class="btn btn-secondary inv-tab-btn" onclick="switchInvTab('logs', this)">
+        <i data-lucide="history"></i> ប្រវត្តិកាត់ស្តុក
+      </button>
+    </div>
+  </div>
+
+  <!-- Low Stock Alert Banner if any -->
+  {% if alerts %}
+  <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:12px 16px; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <i data-lucide="alert-triangle" style="width:24px;height:24px;color:#ef4444;"></i>
+      <div>
+        <div style="font-weight:700; color:#991b1b; font-size:0.95rem;">សេចក្តីជូនដំណឹង៖ មានវត្ថុធាតុដើម {{ alerts|length }} មុខជិតអស់ពីស្តុក!</div>
+        <div style="font-size:0.8rem; color:#b91c1c;">
+          {% for a in alerts[:4] %}
+            <span style="background:#fee2e2; padding:2px 8px; border-radius:4px; margin-right:4px; font-weight:600;">
+              {{ a.name_km }}: នៅសល់ {{ a.current_stock }} {{ a.unit }}
+            </span>
+          {% endfor %}
+          {% if alerts|length > 4 %}...{% endif %}
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-danger" style="padding:6px 12px; font-size:0.82rem;" onclick="switchInvTab('materials')">
+      ពិនិត្យស្តុកឥឡូវនេះ
+    </button>
+  </div>
+  {% endif %}
+
+  <!-- ==================== TAB 1: RAW MATERIALS ==================== -->
+  <div id="tabMaterials" class="inv-tab-content">
+    <div class="card-header-row" style="margin-bottom:1rem;">
+      <div class="search-box" style="max-width:300px;">
+        <i data-lucide="search"></i>
+        <input type="text" id="matSearch" class="search-input" placeholder="ស្វែងរកវត្ថុធាតុដើម..." oninput="filterMaterialsTable()">
+      </div>
+
+      <button class="btn btn-primary" onclick="openAddMaterialModal()">
+        <i data-lucide="plus"></i> បន្ថែមវត្ថុធាតុដើមថ្មី
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table" id="materialsTable">
+        <thead>
+          <tr>
+            <th>លេខកូដ / ឈ្មោះ</th>
+            <th>ឈ្មោះជាភាសាអង់គ្លេស</th>
+            <th>ឯកតា (Unit)</th>
+            <th>ស្តុកបច្ចុប្បន្ន</th>
+            <th>កម្រិតព្រមាន (Min)</th>
+            <th>តម្លៃដើម ($/ឯកតា)</th>
+            <th>ស្ថានភាព</th>
+            <th style="text-align:right;">សកម្មភាព</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in materials %}
+          <tr class="mat-row">
+            <td>
+              <strong style="color:#0f172a;">{{ m.name_km }}</strong>
+            </td>
+            <td style="color:#64748b;">{{ m.name_en }}</td>
+            <td><span class="badge badge-info">{{ m.unit }}</span></td>
+            <td>
+              <strong style="font-size:1rem; {% if m.current_stock <= m.min_threshold %}color:#ef4444;{% else %}color:#059669;{% endif %}">
+                {{ m.current_stock }}
+              </strong> {{ m.unit }}
+            </td>
+            <td>{{ m.min_threshold }} {{ m.unit }}</td>
+            <td>${{ "%.3f"|format(m.cost_per_unit) }}</td>
+            <td>
+              {% if m.current_stock <= 0 %}
+                <span class="badge badge-danger">អស់ពីស្តុក (Out)</span>
+              {% elif m.current_stock <= m.min_threshold %}
+                <span class="badge badge-warning">ជិតអស់ (Low Stock)</span>
+              {% else %}
+                <span class="badge badge-success">ស្តុកគ្រប់គ្រាន់</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-primary" style="padding:4px 8px; font-size:0.78rem;" onclick="openStockInModal({{ m.id }}, '{{ m.name_km }}', '{{ m.unit }}')" title="នាំចូលស្តុក">
+                <i data-lucide="arrow-down-circle" style="width:14px;height:14px;"></i> នាំចូល
+              </button>
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.78rem;" onclick="openEditMaterialModal({{ m.id }}, '{{ m.name_km }}', '{{ m.name_en }}', '{{ m.unit }}', {{ m.min_threshold }}, {{ m.cost_per_unit }})" title="កែប្រែ">
+                <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+              </button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.78rem;" onclick="deleteMaterial({{ m.id }}, '{{ m.name_km }}')" title="លុប">
+                <i data-lucide="trash" style="width:14px;height:14px;"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 2: PRODUCTS ==================== -->
+  <div id="tabProducts" class="inv-tab-content" style="display:none;">
+    <div class="card-header-row" style="margin-bottom:1rem;">
+      <div class="search-box" style="max-width:300px;">
+        <i data-lucide="search"></i>
+        <input type="text" id="prodSearch" class="search-input" placeholder="ស្វែងរកភេសជ្ជៈ..." oninput="filterProductsTable()">
+      </div>
+
+      <button class="btn btn-primary" onclick="openAddProductModal()">
+        <i data-lucide="plus"></i> បន្ថែមភេសជ្ជៈថ្មី
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table" id="productsTable">
+        <thead>
+          <tr>
+            <th>រូបភាព</th>
+            <th>កូដ & ឈ្មោះភេសជ្ជៈ</th>
+            <th>ប្រភេទ</th>
+            <th>តម្លៃលក់ ($)</th>
+            <th>ស្ថានភាព</th>
+            <th style="text-align:right;">សកម្មភាព</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+          <tr class="prod-row">
+            <td style="width:60px;">
+              <img src="{{ p.image_url or '/static/images/brown_sugar_boba.svg' }}" alt="{{ p.name_km }}" style="width:44px; height:44px; border-radius:8px; object-fit:contain; background:#f8fafc; border:1px solid #e2e8f0;">
+            </td>
+            <td>
+              <div style="font-size:0.75rem; font-weight:700; color:#64748b;">{{ p.code or 'N/A' }}</div>
+              <strong style="font-size:0.92rem; color:#0f172a;">{{ p.name_km }}</strong>
+              <div style="font-size:0.75rem; color:#94a3b8;">{{ p.name_en }}</div>
+            </td>
+            <td><span class="badge badge-info">{{ p.category_name }}</span></td>
+            <td>
+              <strong style="font-size:1.05rem; color:#059669;">${{ "%.2f"|format(p.base_price) }}</strong>
+            </td>
+            <td>
+              {% if p.is_available %}
+                <span class="badge badge-success">កំពុងលក់</span>
+              {% else %}
+                <span class="badge badge-danger">ផ្អាកលក់</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.78rem;" onclick="openRecipeModal({{ p.id }}, '{{ p.name_km }}')" title="កំណត់រូបមន្តកាត់ស្តុក">
+                <i data-lucide="flask-conical" style="width:14px;height:14px;color:#6366f1;"></i> រូបមន្ត
+              </button>
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.78rem;" onclick="openEditProductModal({{ p.id }}, {{ p.category_id }}, '{{ p.name_km }}', '{{ p.name_en }}', '{{ p.code }}', {{ p.base_price }}, '{{ p.image_url }}', '{{ p.description }}', {{ p.is_available }})" title="កែប្រែ">
+                <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+              </button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.78rem;" onclick="deleteProduct({{ p.id }}, '{{ p.name_km }}')" title="លុប">
+                <i data-lucide="trash" style="width:14px;height:14px;"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 3: TOPPINGS ==================== -->
+  <div id="tabToppings" class="inv-tab-content" style="display:none;">
+    <div class="card-header-row" style="margin-bottom:1rem;">
+      <div style="font-weight:700; color:#475569;">បញ្ជី Toppings បន្ថែមលើភេសជ្ជៈ</div>
+      <button class="btn btn-primary" onclick="openAddToppingModal()">
+        <i data-lucide="plus"></i> បន្ថែម Topping ថ្មី
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ឈ្មោះ Topping</th>
+            <th>ឈ្មោះភាសាអង់គ្លេស</th>
+            <th>តម្លៃបន្ថែម ($)</th>
+            <th>ភ្ជាប់ជាមួយវត្ថុធាតុដើមស្តុក</th>
+            <th>បរិមាណកាត់ក្នុង ១ កែវ</th>
+            <th style="text-align:right;">សកម្មភាព</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in toppings %}
+          <tr>
+            <td><strong>{{ t.name_km }}</strong></td>
+            <td style="color:#64748b;">{{ t.name_en }}</td>
+            <td><strong style="color:#b45309;">+${{ "%.2f"|format(t.price) }}</strong></td>
+            <td>
+              {% if t.material_name %}
+                <span class="badge badge-info">{{ t.material_name }}</span>
+              {% else %}
+                <span style="color:#94a3b8; font-size:0.8rem;">(មិនភ្ជាប់ស្តុក)</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.deduction_amount > 0 %}
+                {{ t.deduction_amount }} {{ t.material_unit or 'g' }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.78rem;" onclick="openEditToppingModal({{ t.id }}, '{{ t.name_km }}', '{{ t.name_en }}', {{ t.price }}, '{{ t.raw_material_id }}', {{ t.deduction_amount }}, {{ t.is_available }})">
+                <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+              </button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.78rem;" onclick="deleteTopping({{ t.id }}, '{{ t.name_km }}')">
+                <i data-lucide="trash" style="width:14px;height:14px;"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 4: STOCK LOGS ==================== -->
+  <div id="tabLogs" class="inv-tab-content" style="display:none;">
+    <div class="card-header-row" style="margin-bottom:1rem;">
+      <div style="font-weight:700; color:#475569;">ប្រវត្តិនាំចូល និងកាត់ស្តុកចុងក្រោយ (Stock Audit Trail)</div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>កាលបរិច្ឆេទ</th>
+            <th>វត្ថុធាតុដើម</th>
+            <th>ប្រភេទបំលាស់ប្តូរ</th>
+            <th>បរិមាណកែប្រែ</th>
+            <th>ស្តុកនៅសល់ចុងក្រោយ</th>
+            <th>កំណត់សម្គាល់</th>
+            <th>អ្នកកត់ត្រា</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in stock_logs %}
+          <tr>
+            <td style="font-size:0.8rem; color:#64748b;">{{ log.created_at }}</td>
+            <td><strong>{{ log.material_name }}</strong></td>
+            <td>
+              {% if log.change_type == 'sale_deduct' %}
+                <span class="badge badge-warning">កាត់ពេលលក់ (Sale)</span>
+              {% elif log.change_type == 'restock' %}
+                <span class="badge badge-success">នាំចូល (Restock)</span>
+              {% elif log.change_type == 'order_void' %}
+                <span class="badge badge-info">ត្រឡប់ស្តុក (Void)</span>
+              {% else %}
+                <span class="badge badge-secondary">{{ log.change_type }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <strong style="{% if log.quantity_changed < 0 %}color:#ef4444;{% else %}color:#059669;{% endif %}">
+                {% if log.quantity_changed > 0 %}+{% endif %}{{ log.quantity_changed }} {{ log.unit }}
+              </strong>
+            </td>
+            <td><strong>{{ log.balance_after }} {{ log.unit }}</strong></td>
+            <td style="font-size:0.8rem; color:#64748b;">{{ log.notes }}</td>
+            <td style="font-size:0.8rem;">{{ log.created_by }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Stock In Modal -->
+<div id="stockInModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">នាំចូលស្តុកបន្ថែម (Stock-In)</div>
+      <button class="btn-close-modal" onclick="closeModal('stockInModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="stockInMatId">
+      <div>
+        <div style="font-size:0.85rem; color:#64748b;">មុខទំនិញ៖</div>
+        <div id="stockInMatName" style="font-size:1.1rem; font-weight:800; color:#065f46;">-</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">បរិមាណនាំចូលបន្ថែម (<span id="stockInUnit">pcs</span>):</label>
+        <input type="number" id="stockInQty" class="form-control" placeholder="0" min="1" step="1" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">កំណត់សម្គាល់ (Notes):</label>
+        <input type="text" id="stockInNotes" class="form-control" placeholder="ឧទាហរណ៍៖ ទិញពីផ្សារធំថ្មី">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('stockInModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitStockIn()"><i data-lucide="check"></i> រក្សាទុក</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material Modal (Add/Edit) -->
+<div id="materialModal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div id="materialModalTitle" class="modal-title">បន្ថែមវត្ថុធាតុដើមថ្មី</div>
+      <button class="btn-close-modal" onclick="closeModal('materialModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editMatId">
+      
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះជាភាសាខ្មែរ *:</label>
+        <input type="text" id="matNameKm" class="form-control" placeholder="ឧ. ស្លឹកតែក្រហម" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះជាភាសាអង់គ្លេស:</label>
+        <input type="text" id="matNameEn" class="form-control" placeholder="e.g. Red Tea Leaves">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">ឯកតារាប់ (Unit) *:</label>
+          <select id="matUnit" class="form-control">
+            <option value="pcs">pcs (កែវ/ទុយោ/គ្រាប់)</option>
+            <option value="g">g (ក្រាម - ម្សៅ/គ្រាប់តែ/គុជ)</option>
+            <option value="ml">ml (មីលីលីត្រ - ទឹកដោះគោ/ស៊ីរ៉ូ)</option>
+            <option value="kg">kg (គីឡូក្រាម)</option>
+            <option value="l">l (លីត្រ)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="initialStockGroup">
+          <label class="form-label">ស្តុកដំបូង:</label>
+          <input type="number" id="matInitialStock" class="form-control" placeholder="0" value="0">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">កម្រិតព្រមានជិតអស់ (Min Alert):</label>
+          <input type="number" id="matMinAlert" class="form-control" placeholder="10" value="10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">តម្លៃដើមក្នុង ១ ឯកតា ($):</label>
+          <input type="number" id="matCostPerUnit" class="form-control" placeholder="0.00" step="0.001" value="0.00">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('materialModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitMaterialForm()"><i data-lucide="check"></i> រក្សាទុក</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal (Add/Edit) -->
+<div id="productModal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div id="productModalTitle" class="modal-title">បន្ថែមភេសជ្ជៈថ្មី</div>
+      <button class="btn-close-modal" onclick="closeModal('productModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editProdId">
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">ប្រភេទភេសជ្ជៈ *:</label>
+          <select id="prodCategory" class="form-control">
+            {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name_km }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">កូដភេសជ្ជៈ (Item Code):</label>
+          <input type="text" id="prodCode" class="form-control" placeholder="ឧ. MT06">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះភេសជ្ជៈជាភាសាខ្មែរ *:</label>
+        <input type="text" id="prodNameKm" class="form-control" placeholder="ឧ. តែគុជស្ករត្នោត" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះជាភាសាអង់គ្លេស:</label>
+        <input type="text" id="prodNameEn" class="form-control" placeholder="e.g. Brown Sugar Milk Tea">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">តម្លៃលក់គោល ($ USD) *:</label>
+          <input type="number" id="prodBasePrice" class="form-control" placeholder="2.00" step="0.05" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ស្ថានភាពលក់:</label>
+          <select id="prodAvailable" class="form-control">
+            <option value="1">កំពុងដាក់លក់ (Available)</option>
+            <option value="0">ផ្អាកលក់បណ្តោះអាសន្ន</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">រូបភាពគំរូ (SVG/Image):</label>
+        <select id="prodImage" class="form-control">
+          <option value="/static/images/brown_sugar_boba.svg">តែគុជស្ករត្នោត (Brown Sugar Boba)</option>
+          <option value="/static/images/matcha_latte.svg">តែបៃតងម៉ាត់ឆា (Matcha Latte)</option>
+          <option value="/static/images/classic_milk_tea.svg">តែទឹកដោះគោបុរាណ (Classic Milk Tea)</option>
+          <option value="/static/images/thai_tea.svg">តែក្រហមថៃ (Thai Tea)</option>
+          <option value="/static/images/taro_milk_tea.svg">តែត្រសក់ស្រូវ (Taro Milk Tea)</option>
+          <option value="/static/images/iced_coffee.svg">កាហ្វេទឹកដោះគោ (Iced Milk Coffee)</option>
+          <option value="/static/images/americano.svg">កាហ្វេអាមេរិកាណូ (Americano)</option>
+          <option value="/static/images/latte.svg">កាហ្វេឡាតេ (Latte)</option>
+          <option value="/static/images/passion_tea.svg">តែផាសិនស្រស់ (Passion Tea)</option>
+          <option value="/static/images/strawberry_smoothie.svg">ស្ត្រប៊ែរីក្រឡុក (Strawberry)</option>
+          <option value="/static/images/lemon_tea.svg">តែក្រូចឆ្មារ (Lemon Tea)</option>
+          <option value="/static/images/chocolate.svg">សូកូឡា (Chocolate)</option>
+          <option value="/static/images/matcha_cheese.svg">ម៉ាត់ឆាឈីស (Matcha Cheese)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ការពិពណ៌នាខ្លីៗ:</label>
+        <input type="text" id="prodDesc" class="form-control" placeholder="ព័ត៌មានលម្អិតអំពីភេសជ្ជៈ">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('productModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitProductForm()"><i data-lucide="check"></i> រក្សាទុក</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recipe / BOM Modal -->
+<div id="recipeModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:600px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">រូបមន្តកាត់ស្តុកវត្ថុធាតុដើម (BOM Recipe)</div>
+        <div id="recipeProdName" style="font-size:0.8rem; color:var(--primary); font-weight:700;">-</div>
+      </div>
+      <button class="btn-close-modal" onclick="closeModal('recipeModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.8rem; color:#64748b;">
+        ប្រព័ន្ធនឹងកាត់វត្ថុធាតុដើមទាំងនេះចេញពីស្តុកដោយស្វ័យប្រវត្តិ រាល់ពេលមានការលក់ភេសជ្ជៈនេះ៖
+      </p>
+
+      <div id="recipeItemsList" style="display:flex; flex-direction:column; gap:8px;">
+        <!-- Dynamic recipe rows -->
+      </div>
+
+      <button type="button" class="btn btn-secondary" style="width:100%; border-style:dashed; margin-top:8px;" onclick="addRecipeRow()">
+        <i data-lucide="plus"></i> បន្ថែមវត្ថុធាតុដើមក្នុងរូបមន្ត
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('recipeModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitRecipeForm()"><i data-lucide="check"></i> រក្សាទុករូបមន្ត</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topping Modal -->
+<div id="toppingModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:460px;">
+    <div class="modal-header">
+      <div id="toppingModalTitle" class="modal-title">បន្ថែម Topping ថ្មី</div>
+      <button class="btn-close-modal" onclick="closeModal('toppingModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editTopId">
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះ Topping (ខ្មែរ) *:</label>
+        <input type="text" id="topNameKm" class="form-control" placeholder="ឧ. គុជខ្មៅ" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះ (អង់គ្លេស):</label>
+        <input type="text" id="topNameEn" class="form-control" placeholder="e.g. Black Pearls">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">តម្លៃគិតបន្ថែម ($ USD) *:</label>
+        <input type="number" id="topPrice" class="form-control" placeholder="0.35" step="0.05" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">ភ្ជាប់ជាមួយវត្ថុធាតុដើម:</label>
+          <select id="topRawMaterial" class="form-control">
+            <option value="">(មិនភ្ជាប់ស្តុក)</option>
+            {% for m in materials %}
+            <option value="{{ m.id }}">{{ m.name_km }} ({{ m.unit }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">បរិមាណកាត់ស្តុក:</label>
+          <input type="number" id="topDeductAmount" class="form-control" placeholder="30" step="1" value="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('toppingModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitToppingForm()"><i data-lucide="check"></i> រក្សាទុក</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+{% endblock %}

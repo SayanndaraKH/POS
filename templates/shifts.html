@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងវេនលក់ និងថតលុយ - {{ settings.get('shop_name_km') }}{% endblock %}
+
+{% block content %}
+<div class="card-box">
+  
+  <div class="card-header-row">
+    <div>
+      <div class="card-title">
+        <i data-lucide="wallet" style="width:24px;height:24px;color:var(--primary);"></i>
+        គ្រប់គ្រងវេនលក់ និងថតលុយ (Shift & Cash Drawer)
+      </div>
+      <div style="font-size:0.85rem; color:#64748b;">កត់ត្រាការបើក និងបិទវេនលក់ ផ្ទៀងផ្ទាត់សាច់ប្រាក់ក្នុងថតលុយ</div>
+    </div>
+
+    <div>
+      {% if not current_shift %}
+      <button class="btn btn-primary" onclick="openShiftModal()">
+        <i data-lucide="play"></i> បើកវេនលក់ថ្មី (Open Shift)
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- CURRENT ACTIVE SHIFT BANNER -->
+  {% if current_shift %}
+  <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0; border-radius:14px; padding:1.5rem; margin-bottom:1.5rem; box-shadow:var(--shadow-sm);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span class="badge badge-success" style="font-size:0.85rem;">🟢 កំពុងដំណើរការ (Active Shift)</span>
+          <strong style="font-size:1.1rem; color:#064e3b;">វេនលេខ #{{ current_shift.id }}</strong>
+        </div>
+        <div style="font-size:0.85rem; color:#047857;">
+          ចាប់ផ្តើមនៅ៖ <strong>{{ current_shift.start_time }}</strong> | អ្នកកាន់វេន៖ <strong>{{ current_shift.cashier_name or current_user.full_name }}</strong>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" onclick="openCloseShiftModal({{ current_shift.id }}, {{ current_shift.total_sales_usd }}, {{ current_shift.opening_float_usd }})">
+        <i data-lucide="square"></i> បិទវេនលក់ (Close Shift)
+      </button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-top:1.2rem; background:#ffffff; padding:1rem; border-radius:10px; border:1px solid #a7f3d0;">
+      <div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600;">លុយបម្រុងពេលបើកវេន (Float):</div>
+        <div style="font-size:1.15rem; font-weight:800; color:#0f172a;">${{ "%.2f"|format(current_shift.opening_float_usd) }}</div>
+        <div style="font-size:0.75rem; color:#64748b;">{{ current_shift.opening_float_khr|int }} ៛</div>
+      </div>
+
+      <div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600;">ចំណូលលក់ក្នុងវេននេះ:</div>
+        <div style="font-size:1.15rem; font-weight:800; color:#059669;">${{ "%.2f"|format(current_shift.total_sales_usd) }}</div>
+        <div style="font-size:0.75rem; color:#059669; font-weight:700;">{{ current_shift.total_sales_khr|int }} ៛</div>
+      </div>
+
+      <div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600;">ចំនួនកុម្ម៉ង់សរុប:</div>
+        <div style="font-size:1.15rem; font-weight:800; color:#6366f1;">{{ current_shift.total_orders }} វិក្កយបត្រ</div>
+      </div>
+
+      <div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600;">លុយក្នុងថតរំពឹងទុក (Expected Cash):</div>
+        <div style="font-size:1.15rem; font-weight:800; color:#b45309;">${{ "%.2f"|format(current_shift.opening_float_usd + current_shift.total_sales_usd) }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SHIFT HISTORY TABLE -->
+  <div class="card-title" style="font-size:1.05rem; margin-bottom:1rem;">
+    <i data-lucide="history" style="width:18px;height:18px;color:var(--primary);"></i>
+    ប្រវត្តិវេនលក់ចុងក្រោយ (Shift History)
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>លេខវេន</th>
+          <th>អ្នកគិតលុយ</th>
+          <th>ពេលចាប់ផ្តើម</th>
+          <th>ពេលបញ្ចប់</th>
+          <th>លុយបម្រុង (Float)</th>
+          <th>ចំណូលសរុប ($)</th>
+          <th>ចំនួនវិក្កយបត្រ</th>
+          <th>លុយរាប់បិទវេន</th>
+          <th>ស្ថានភាព</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in shifts %}
+        <tr>
+          <td><strong>#{{ s.id }}</strong></td>
+          <td><strong>{{ s.cashier_name }}</strong></td>
+          <td style="font-size:0.8rem; color:#64748b;">{{ s.start_time }}</td>
+          <td style="font-size:0.8rem; color:#64748b;">{{ s.end_time or '-' }}</td>
+          <td>${{ "%.2f"|format(s.opening_float_usd) }}</td>
+          <td><strong style="color:#059669;">${{ "%.2f"|format(s.total_sales_usd) }}</strong></td>
+          <td><span class="badge badge-info">{{ s.total_orders }}</span></td>
+          <td>
+            {% if s.status == 'closed' %}
+              <strong>${{ "%.2f"|format(s.closing_cash_usd) }}</strong>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if s.status == 'open' %}
+              <span class="badge badge-success">កំពុងបើក</span>
+            {% else %}
+              <span class="badge badge-secondary">បានបិទ</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- OPEN SHIFT MODAL -->
+<div id="openShiftModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">បើកវេនលក់ថ្មី (Open Shift)</div>
+      <button class="btn-close-modal" onclick="closeModal('openShiftModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">លុយបម្រុងក្នុងថត ($ USD):</label>
+        <input type="number" id="openFloatUsd" class="form-control" placeholder="20.00" step="1" value="20.00" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">លុយបម្រុងក្នុងថត (៛ KHR):</label>
+        <input type="number" id="openFloatKhr" class="form-control" placeholder="80000" step="1000" value="80000">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">កំណត់សម្គាល់ (Notes):</label>
+        <input type="text" id="openShiftNotes" class="form-control" placeholder="ឧ. វេនពេលព្រឹក">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('openShiftModal')">បោះបង់</button>
+      <button class="btn btn-primary" onclick="submitOpenShift()"><i data-lucide="play"></i> បើកវេន</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOSE SHIFT MODAL -->
+<div id="closeShiftModal" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">បិទវេនលក់ (Close Shift & Reconcile)</div>
+      <button class="btn-close-modal" onclick="closeModal('closeShiftModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="closeShiftId">
+      
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+        <div style="font-size:0.85rem; color:#64748b;">លុយក្នុងថតដែលប្រព័ន្ធរំពឹងទុក (Expected Total):</div>
+        <div id="expectedDrawerCash" style="font-size:1.3rem; font-weight:800; color:#065f46;">$0.00</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ចំនួនលុយរាប់បានជាក់ស្តែង ($ USD) *:</label>
+        <input type="number" id="actualCashUsd" class="form-control" placeholder="0.00" step="0.5" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ចំនួនលុយរាប់បានជាក់ស្តែង (៛ KHR):</label>
+        <input type="number" id="actualCashKhr" class="form-control" placeholder="0" step="1000">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">កំណត់សម្គាល់បិទវេន:</label>
+        <input type="text" id="closeShiftNotes" class="form-control" placeholder="ឧ. លុយគ្រប់ចំនួន គ្មានបញ្ហា">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('closeShiftModal')">បោះបង់</button>
+      <button class="btn btn-danger" onclick="submitCloseShift()"><i data-lucide="check-square"></i> បញ្ជាក់បិទវេន</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  function openShiftModal() {
+    document.getElementById('openShiftModal').classList.add('show');
+  }
+
+  function openCloseShiftModal(shiftId, salesUsd, floatUsd) {
+    document.getElementById('closeShiftId').value = shiftId;
+    const expected = floatUsd + salesUsd;
+    document.getElementById('expectedDrawerCash').innerText = `$${expected.toFixed(2)}`;
+    document.getElementById('actualCashUsd').value = expected.toFixed(2);
+    document.getElementById('closeShiftModal').classList.add('show');
+  }
+
+  async function submitOpenShift() {
+    const floatUsd = parseFloat(document.getElementById('openFloatUsd').value) || 0;
+    const floatKhr = parseFloat(document.getElementById('openFloatKhr').value) || 0;
+    const notes = document.getElementById('openShiftNotes').value.trim();
+
+    try {
+      const res = await fetch('/api/shift/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opening_float_usd: floatUsd, opening_float_khr: floatKhr, notes: notes })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (e) {
+      alert('បរាជ័យក្នុងការបើកវេន!');
+    }
+  }
+
+  async function submitCloseShift() {
+    const shiftId = document.getElementById('closeShiftId').value;
+    const cashUsd = parseFloat(document.getElementById('actualCashUsd').value) || 0;
+    const cashKhr = parseFloat(document.getElementById('actualCashKhr').value) || 0;
+    const notes = document.getElementById('closeShiftNotes').value.trim();
+
+    try {
+      const res = await fetch('/api/shift/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shift_id: shiftId, closing_cash_usd: cashUsd, closing_cash_khr: cashKhr, notes: notes })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (e) {
+      alert('បរាជ័យក្នុងការបិទវេន!');
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="matchaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#d1fae5"/>
+    </linearGradient>
+    <linearGradient id="matchaGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="24" fill="url(#matchaBg)"/>
+  <rect x="110" y="25" width="14" height="90" rx="7" transform="rotate(12 120 70)" fill="#10b981" stroke="#fff" stroke-width="2"/>
+  <path d="M65 75 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L175 75 Z" fill="#ffffff" stroke="#10b981" stroke-width="3"/>
+  <!-- Matcha Layer -->
+  <path d="M68 115 L78 190 Q80 205 100 205 L140 205 Q160 205 162 190 L172 115 Q145 130 120 115 Q95 130 68 115 Z" fill="url(#matchaGreen)"/>
+  <!-- Milk foam top -->
+  <ellipse cx="120" cy="75" rx="55" ry="10" fill="#f0fdf4" stroke="#10b981" stroke-width="3"/>
+  <!-- Matcha powder sprinkle -->
+  <circle cx="105" cy="75" r="2" fill="#047857"/>
+  <circle cx="120" cy="73" r="2.5" fill="#047857"/>
+  <circle cx="135" cy="76" r="2" fill="#047857"/>
+</svg>

@@ -1,0 +1,58 @@
+ផែនការអនុវត្ត៖ ប្រព័ន្ធគ្រប់គ្រងការលក់តែគុជ និងភេសជ្ជៈ (Boba & Beverage POS System)
+ប្រព័ន្ធ POS លើគេហទំព័រ (Python Web Application) នេះ ត្រូវបានរចនាឡើងយ៉ាងពិសេសសម្រាប់អាជីវកម្មលក់តែគុជ កាហ្វេ និងភេសជ្ជៈ ដោយរួមបញ្ចូលភាសាខ្មែរ និងអង់គ្លេស រូបិយប័ណ្ណពីរ (USD / KHR - រៀល) ការគ្រប់គ្រងស្តុកកាត់វត្ថុធាតុដើមស្វ័យប្រវត្តិ របាយការណ៍លម្អិត និងសុវត្ថិភាពខ្ពស់។
+
+1. ស្ថាបត្យកម្ម និងបច្ចេកវិទ្យា (Architecture & Tech Stack)
+Backend: Python 3.12 + Flask (ស្រាល រហ័ស និងមានស្ថេរភាពខ្ពស់)
+Database: SQLite (រៀបចំរចនាសម្ព័ន្ធ Table ច្បាស់លាស់ ងាយស្រួល Backup/Restore)
+Frontend: Vanilla HTML5, Modern CSS (Glassmorphism & Fresh Boba Tea Palette), JavaScript (ES6+), Font 'Kantumruy Pro' / 'Plus Jakarta Sans', Lucide Icons, Chart.js សម្រាប់ Dashboard
+Printing: 80mm & 58mm Thermal Receipt CSS, Auto-print & PDF download
+Payment: Cash Payment + Dynamic KHQR / Bakong QR Generator
+2. ម៉ូឌុលទាំង ៤ សំខាន់ៗ (Core Modules)
+ផ្នែកទី ១៖ មុខងារលក់ និងបញ្ជាទិញ (Point of Sale)
+ចំណាត់ថ្នាក់ភេសជ្ជៈ (Beverage Categories):
+តែគុជ (Milk Tea), កាហ្វេ (Coffee), ទឹកក្រឡុក & តែផ្លែឈើ (Smoothies & Fruit Tea), សូកូឡា និងតែបៃតង (Special Brews)
+ការកំណត់ជម្រើសបន្ថែម (Drink Customization Modal):
+ទំហំកែវ (Size): Regular (M) / Large (L) (+ តម្លៃបន្ថែម)
+កម្រិតស្ករ (Sugar Level): 0%, 25%, 50%, 75%, 100%, 120%
+កម្រិតទឹកកក (Ice Level): គ្មានទឹកកក (0%), ត្រជាក់ល្មម (50%), ទឹកកកពេញ (100%), ក្តៅ (Hot)
+ជម្រើស Toppings បន្ថែម: គុជខ្មៅ (Brown Sugar Pearls), គុជស (White Pearl), ចាហួយដូង (Coconut Jelly), គ្រាប់ជី (Chia Seeds), ពពុះឈីស (Cheese Foam), ពងមាន់ភូឌីង (Egg Pudding) ជាមួយតម្លៃជាក់លាក់
+ការគិតប្រាក់ (Checkout & Payments):
+គាំទ្រទាំង សាច់ប្រាក់ (Cash) (គណនាលុយអាប់ជាដុល្លារ និងរៀល) និង KHQR / Bakong QR Code បង្ហាញលេខកូដស្កេនទូទាត់ភ្លាមៗ
+គណនាអត្រាប្តូរប្រាក់ (Exchange Rate ឧទាហរណ៍ 1 USD = 4,100 KHR) ស្វ័យប្រវត្តិ
+ការចេញវិក្កយបត្រ (Receipt Printing):
+ទម្រង់វិក្កយបត្រស្អាតសម្រាប់ម៉ាស៊ីនព្រីនកម្ដៅ (Thermal Printer 80mm/58mm)
+បង្ហាញព័ត៌មានលម្អិត៖ ឈ្មោះភេសជ្ជៈ, Customization (ស្ករ/ទឹកកក/Topping), បរិមាណ, តម្លៃសរុប (USD & KHR), កាលបរិច្ឆេទ, ឈ្មោះអ្នកគិតលុយ (Cashier)
+ផ្នែកទី ២៖ គ្រប់គ្រងស្តុក និងផលិតផល (Inventory & Recipe Management)
+គ្រប់គ្រងមុខទំនិញ (Menu & Drinks CRUD):
+បន្ថែម, កែប្រែ, លុប ឬផ្អាកលក់ភេសជ្ជៈ, រូបភាព, ប្រភេទ និងតម្លៃ
+គ្រប់គ្រងវត្ថុធាតុដើម (Raw Materials & Stock):
+ស្តុកកែវ (Cups - R/L), ទុយោ (Straws), គ្រាប់កាហ្វេ (Coffee Beans), ស្លឹកតែ (Tea Leaves), ម្សៅដោះគោ (Milk Powder), ទឹកដោះគោស្រស់, ទឹកស៊ីរ៉ូស្ករ (Sugar Syrup), គ្រាប់គុជ (Raw Pearls)
+កាត់ស្តុកវត្ថុធាតុដើមស្វ័យប្រវត្តិ (Auto-Deduction via Recipe/BOM):
+រាល់ពេលលក់តែគុជ ១ កែវ ប្រព័ន្ធនឹងកាត់៖ កែវ ១ + ទុយោ ១ + តែ 30ml + ស្ករតាមកម្រិត % + គុជ 30g
+ប្រព័ន្ធព្រមានជិតអស់ស្តុក (Low Stock Alert System):
+បង្ហាញសញ្ញាព្រមាន (Badge & Notification Banner) ពណ៌ក្រហម/លឿង នៅពេលវត្ថុធាតុដើមធ្លាក់ចុះក្រោម Minimum Threshold កំណត់
+មុខងារបញ្ចូលស្តុកបន្ថែម (Stock-In) និងកត់ត្រាប្រវត្តិនាំចូល
+ផ្នែកទី ៣៖ របាយការណ៍ និងការបង្ហាញទិន្នន័យ (Reporting & Analytics)
+ផ្ទាំងគ្រប់គ្រងស្ថិតិ (Visual Dashboard & Analytics):
+សង្ខេបចំណូលសរុបប្រចាំថ្ងៃ សប្តាហ៍ ខែ (Total Revenue in USD & KHR)
+ចំនួនកែវដែលបានលក់សរុប (Total Cups Sold)
+គំនូសតាង (Chart.js) បង្ហាញភេសជ្ជៈលក់ដាច់ជាងគេ (Top 5 Best Sellers)
+គំនូសតាងទម្រង់ម៉ោងលក់ដាច់បំផុត (Peak Sales Hours)
+តារាងទិន្នន័យ (DataGridView / Advanced Data Table):
+មុខងារបែងចែកទំព័រ (Pagination)
+ការត្រងទិន្នន័យ (Filter by Date Range, Cashier, Category, Payment Method)
+ការស្វែងរកវិក្កយបត្ររហ័សតាមលេខវិក្កយបត្រ (Invoice # Search)
+ការទាញយកទិន្នន័យ (Export Reports):
+ទាញយកជាឯកសារ Excel (XLSX) / CSV
+មុខងារព្រីនរបាយការណ៍សង្ខេបបិទវេន (Z-Report / Shift Close Report)
+ផ្នែកទី ៤៖ គ្រប់គ្រងគណនី និងប្រតិបត្តិការប្រព័ន្ធ (System & User Management)
+ការបែងចែកសិទ្ធិ (Role-Based Access Control - RBAC):
+អ្នកគ្រប់គ្រង (Admin): មើលឃើញគ្រប់មុខងារ (POS, Inventory, Reports, Settings, Users, Backup)
+អ្នកគិតលុយ (Cashier): ចូលប្រើបានតែផ្ទាំងលក់ POS និងមើលរបាយការណ៍វេនផ្ទាល់ខ្លួន
+ការគ្រប់គ្រងវេនលក់ (Shift Management):
+បើកវេន (Open Shift with Initial Cash Drawer Float) និងបិទវេន (Close Shift with Cash Balance reconciliation)
+ការបម្រុងទុកទិន្នន័យ (Data Backup & Restore):
+ទាញយក Backup ឯកសារ Database (pos_tea.db) ដោយចុចតែ ១ ឃ្លីក
+មុខងារ Restore ឯកសារ Database ត្រឡប់មកវិញដោយសុវត្ថិភាព
+ការកំណត់ទូទៅ (Store Settings):
+ឈ្មោះហាង, ឡូហ្គោ, លេខទូរស័ព្ទ, អាសយដ្ឋាន, អត្រាប្តូរប្រាក់ (USD to KHR Rate), សារចុងវិក្កយបត្រ
