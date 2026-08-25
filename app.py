@@ -1006,6 +1006,43 @@ def update_settings_api():
     update_store_settings(data)
     return jsonify({'success': True, 'message': 'បានកែប្រែការកំណត់ហាងជោគជ័យ!'})
 
+@app.route('/api/settings/khqr/upload', methods=['POST'])
+@admin_required
+def upload_khqr_image():
+    """Only Admin is allowed to upload/change store KHQR."""
+    import base64
+    if 'khqr_file' in request.files:
+        file = request.files['khqr_file']
+        if file and file.filename != '':
+            # Validate extension
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in ['.png', '.jpg', '.jpeg', '.webp', '.svg']:
+                return jsonify({'success': False, 'error': 'អនុញ្ញាតតែឯកសាររូបភាព (.png, .jpg, .jpeg, .webp, .svg) ប៉ុណ្ណោះ!'}), 400
+            
+            img_bytes = file.read()
+            # Maximum 5MB check
+            if len(img_bytes) > 5 * 1024 * 1024:
+                return jsonify({'success': False, 'error': 'ទំហំរូបភាពធំពេក (មិនត្រូវលើសពី 5MB)!'}), 400
+
+            mime = file.mimetype or 'image/png'
+            b64_str = f"data:{mime};base64,{base64.b64encode(img_bytes).decode('utf-8')}"
+            update_store_settings({'khqr_image_url': b64_str})
+            return jsonify({'success': True, 'message': 'បាន Upload រូបភាព KHQR ជោគជ័យ!', 'image_url': b64_str})
+
+    data = request.get_json() or {}
+    if 'khqr_image_url' in data:
+        update_store_settings({'khqr_image_url': data['khqr_image_url']})
+        return jsonify({'success': True, 'message': 'បានរក្សាទុករូបភាព KHQR ជោគជ័យ!'})
+
+    return jsonify({'success': False, 'error': 'សូមជ្រើសរើសរូបភាព KHQR ជាមុនសិន!'}), 400
+
+@app.route('/api/settings/khqr/remove', methods=['POST'])
+@admin_required
+def remove_khqr_image():
+    """Only Admin is allowed to reset/remove KHQR."""
+    update_store_settings({'khqr_image_url': ''})
+    return jsonify({'success': True, 'message': 'បានលុបរូបភាព KHQR ជោគជ័យ!'})
+
 # Users CRUD
 @app.route('/api/users', methods=['POST'])
 @admin_required

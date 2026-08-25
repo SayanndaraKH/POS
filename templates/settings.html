@@ -52,17 +52,6 @@
           <input type="text" id="setShopAddress" class="form-control" value="{{ settings.get('shop_address', '') }}">
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div class="form-group">
-            <label class="form-label">Bakong Account ID (KHQR):</label>
-            <input type="text" id="setBakongId" class="form-control" value="{{ settings.get('khqr_bakong_id', '') }}">
-          </div>
-          <div class="form-group">
-            <label class="form-label">ឈ្មោះ Merchant (KHQR):</label>
-            <input type="text" id="setMerchantName" class="form-control" value="{{ settings.get('khqr_merchant_name', '') }}">
-          </div>
-        </div>
-
         <div class="form-group">
           <label class="form-label">សារចុងវិក្កយបត្រ (Receipt Footer):</label>
           <input type="text" id="setReceiptFooter" class="form-control" value="{{ settings.get('receipt_footer_km', '') }}">
@@ -74,9 +63,93 @@
       </form>
     </div>
 
-    <!-- ==================== 2. BACKUP & RESTORE ==================== -->
+    <!-- ==================== 2. KHQR & BACKUP ==================== -->
     <div style="display:flex; flex-direction:column; gap:1.5rem;">
       
+      <!-- KHQR Management Box (Admin Exclusive) -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; box-shadow:var(--shadow-sm); border-top: 4px solid #e11d48;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.8rem;">
+          <div class="card-title" style="font-size:1.05rem; color:#be123c; margin:0;">
+            <i data-lucide="qr-code" style="width:22px;height:22px;color:#e11d48;"></i>
+            គ្រប់គ្រង KHQR (Bakong Payment)
+          </div>
+          <span style="font-size:0.75rem; background:#fee2e2; color:#be123c; font-weight:700; padding:3px 8px; border-radius:6px;">
+            🔒 ADMIN តែប៉ុណ្ណោះ
+          </span>
+        </div>
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:1.2rem;">
+          Upload រូបភាព KHQR ផ្លូវការរបស់ហាងអ្នក ដើម្បីឱ្យអតិថិជនស្កេនទូទាត់ប្រាក់នៅពេល Checkout។
+        </p>
+
+        <!-- Current KHQR Preview -->
+        <div style="display:flex; gap:16px; align-items:center; background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:14px;">
+          <div style="width:110px; height:110px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            {% if settings.get('khqr_image_url') %}
+              <img id="khqrPreviewImg" src="{{ settings.get('khqr_image_url') }}" alt="KHQR" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px;">
+            {% else %}
+              <img id="khqrPreviewImg" src="{{ url_for('generate_qr_image') }}?text=https://bakong.nbc.org.kh" alt="KHQR" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px;">
+            {% endif %}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.88rem; font-weight:700; color:#0f172a;" id="khqrDisplayMerchant">
+              {{ settings.get('khqr_merchant_name', 'SROS SRAY TEA & COFFEE') }}
+            </div>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:2px;" id="khqrDisplayBakong">
+              ID: <strong>{{ settings.get('khqr_bakong_id', 'srossray_tea@aclb') }}</strong>
+            </div>
+            <div style="margin-top:8px;">
+              {% if settings.get('khqr_image_url') %}
+                <span class="badge badge-success" style="font-size:0.75rem;">✓ បាន Upload រូបភាពផ្ទាល់ខ្លួន</span>
+              {% else %}
+                <span class="badge" style="background:#e2e8f0; color:#475569; font-size:0.75rem;">ប្រើប្រាស់ QR Code ស្វ័យប្រវត្តិ</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload & Settings Form -->
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="form-group">
+            <label class="form-label">ជ្រើសរើសរូបភាព KHQR ថ្មី (Upload New QR Image):</label>
+            <div style="display:flex; gap:8px;">
+              <input type="file" id="khqrFileInput" accept="image/*" class="form-control" style="padding:6px; font-size:0.85rem;" onchange="handleKhqrFileSelect(this)">
+              <button type="button" class="btn btn-primary" onclick="submitKhqrUpload()" style="background:#e11d48; white-space:nowrap; padding:8px 14px; font-size:0.85rem;">
+                <i data-lucide="upload"></i> Upload
+              </button>
+            </div>
+            <div style="font-size:0.75rem; color:#94a3b8;">គាំទ្ររូបភាព .PNG, .JPG, .JPEG, .WEBP (ទំហំអតិបរមា 5MB)</div>
+          </div>
+
+          {% if settings.get('khqr_image_url') %}
+          <div style="text-align:right;">
+            <button type="button" class="btn btn-secondary" onclick="submitKhqrRemove()" style="color:#ef4444; border-color:#fca5a5; font-size:0.8rem; padding:4px 10px;">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i> លុបរូបភាពចេញ (ប្រើ QR ដើម)
+            </button>
+          </div>
+          {% endif %}
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:4px;">
+            <div class="form-group">
+              <label class="form-label">Bakong Account ID:</label>
+              <input type="text" id="setBakongId" class="form-control" value="{{ settings.get('khqr_bakong_id', '') }}" placeholder="ឧ. username@aba">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ឈ្មោះ Merchant:</label>
+              <input type="text" id="setMerchantName" class="form-control" value="{{ settings.get('khqr_merchant_name', '') }}" placeholder="ឧ. SROS SRAY TEA">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">សារណែនាំស្កេន (Instruction):</label>
+            <input type="text" id="setKhqrInstruction" class="form-control" value="{{ settings.get('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់') }}">
+          </div>
+
+          <button type="button" class="btn btn-secondary" onclick="saveKhqrDetailsOnly()" style="margin-top:4px; font-size:0.88rem;">
+            <i data-lucide="save"></i> រក្សាទុកព័ត៌មាន KHQR
+          </button>
+        </div>
+      </div>
+
       <!-- Backup Box -->
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; box-shadow:var(--shadow-sm);">
         <div class="card-title" style="font-size:1.05rem; margin-bottom:0.8rem; color:#1e293b;">
@@ -238,6 +311,89 @@
     document.getElementById(id).classList.remove('show');
   }
 
+  // Live Preview on File Select
+  function handleKhqrFileSelect(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('khqrPreviewImg').src = e.target.result;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // Submit KHQR Image Upload (Admin only)
+  async function submitKhqrUpload() {
+    const fileInput = document.getElementById('khqrFileInput');
+    if (!fileInput.files || !fileInput.files[0]) {
+      alert('សូមជ្រើសរើសរូបភាព KHQR ជាមុនសិន!');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('khqr_file', fileInput.files[0]);
+
+    try {
+      const res = await fetch('/api/settings/khqr/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('🎉 ' + result.message);
+        location.reload();
+      } else {
+        alert('កំហុស៖ ' + (result.error || 'មិនអាច Upload បានទេ'));
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការ Upload រូបភាព KHQR!');
+    }
+  }
+
+  // Remove Custom KHQR (Admin only)
+  async function submitKhqrRemove() {
+    if (!confirm('តើអ្នកប្រាកដជាចង់លុបរូបភាព KHQR នេះ ហើយត្រឡប់ទៅប្រើ Dynamic QR ដើមវិញមែនទេ?')) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/settings/khqr/remove', { method: 'POST' });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការលុបរូបភាព KHQR!');
+    }
+  }
+
+  // Save KHQR text details
+  async function saveKhqrDetailsOnly() {
+    const payload = {
+      khqr_bakong_id: document.getElementById('setBakongId').value.trim(),
+      khqr_merchant_name: document.getElementById('setMerchantName').value.trim(),
+      khqr_instruction: document.getElementById('setKhqrInstruction').value.trim()
+    };
+    try {
+      const res = await fetch('/api/settings/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('🎉 បានរក្សាទុកព័ត៌មាន KHQR ជោគជ័យ!');
+        location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('បរាជ័យក្នុងការរក្សាទុកព័ត៌មាន KHQR!');
+    }
+  }
+
   // Save Store Settings
   async function saveStoreSettings(e) {
     e.preventDefault();
@@ -247,9 +403,10 @@
       shop_phone: document.getElementById('setShopPhone').value.trim(),
       shop_address: document.getElementById('setShopAddress').value.trim(),
       exchange_rate: document.getElementById('setExchangeRate').value.trim(),
+      receipt_footer_km: document.getElementById('setReceiptFooter').value.trim(),
       khqr_bakong_id: document.getElementById('setBakongId').value.trim(),
       khqr_merchant_name: document.getElementById('setMerchantName').value.trim(),
-      receipt_footer_km: document.getElementById('setReceiptFooter').value.trim()
+      khqr_instruction: document.getElementById('setKhqrInstruction').value.trim()
     };
 
     try {

@@ -377,8 +377,17 @@ function openCheckoutModal() {
   // Setup KHQR preview
   switchPaymentMethod('cash');
   document.getElementById('khqrDisplayAmount').innerText = `$${totalUsd.toFixed(2)} (≈ ${totalKhr.toLocaleString()} ៛)`;
-  const qrUrl = `/api/qr/generate?text=${encodeURIComponent(`KHQR:SROS_SRAY:AMOUNT=${totalUsd}:KHR=${totalKhr}`)}`;
-  document.getElementById('khqrLiveImg').src = qrUrl;
+  
+  const khqrImgEl = document.getElementById('khqrLiveImg');
+  if (khqrImgEl) {
+    if (window.KHQR_CONFIG && window.KHQR_CONFIG.imageUrl && window.KHQR_CONFIG.imageUrl.trim() !== '') {
+      khqrImgEl.src = window.KHQR_CONFIG.imageUrl;
+    } else {
+      const bakongId = (window.KHQR_CONFIG && window.KHQR_CONFIG.bakongId) ? window.KHQR_CONFIG.bakongId : 'srossray_tea@aclb';
+      const qrPayload = `https://bakong.nbc.org.kh/pay?acc=${encodeURIComponent(bakongId)}&amount=${totalUsd.toFixed(2)}&cur=USD`;
+      khqrImgEl.src = `/api/qr/generate?text=${encodeURIComponent(qrPayload)}`;
+    }
+  }
 
   document.getElementById('checkoutModal').classList.add('show');
 }
@@ -435,8 +444,8 @@ function calculateChange() {
   document.getElementById('changeAmountKhr').innerText = `${changeKhr.toLocaleString()} ៛`;
 }
 
-function simulateKhqrSuccess() {
-  alert('🎉 ការស្កេនទូទាត់ប្រាក់តាម KHQR ទទួលបានជោគជ័យ!');
+function confirmKhqrPaymentReceived() {
+  activePaymentMethod = 'khqr';
   submitFinalOrder();
 }
 

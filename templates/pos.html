@@ -302,19 +302,25 @@
       <div id="khqrPaymentContent" style="display:none;">
         <div class="khqr-card">
           <div class="khqr-header-tag">KHQR • BAKONG</div>
-          <div class="khqr-merchant">{{ settings.get('khqr_merchant_name', 'SROS SRAY TEA') }}</div>
+          <div class="khqr-merchant" id="khqrPosMerchant">{{ settings.get('khqr_merchant_name', 'SROS SRAY TEA & COFFEE') }}</div>
           
-          <div class="khqr-box">
-            <img id="khqrLiveImg" src="{{ url_for('generate_qr_image') }}?text=https://bakong.nbc.org.kh" alt="KHQR Code" class="khqr-img">
+          <div class="khqr-box" style="position:relative; background:#ffffff; padding:12px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+            {% if settings.get('khqr_image_url') %}
+              <img id="khqrLiveImg" src="{{ settings.get('khqr_image_url') }}" alt="KHQR Code" class="khqr-img" style="max-height:220px; width:auto; border-radius:8px; object-fit:contain;">
+            {% else %}
+              <img id="khqrLiveImg" src="{{ url_for('generate_qr_image') }}?text=https://bakong.nbc.org.kh" alt="KHQR Code" class="khqr-img" style="width:190px; height:190px;">
+            {% endif %}
           </div>
 
           <div id="khqrDisplayAmount" class="khqr-amount">$0.00 (≈ 0 ៛)</div>
-          <div style="font-size:0.75rem; opacity:0.9;">ស្កេនទូទាត់ជាមួយកម្មវិធីធនាគារនានាក្នុងប្រទេសកម្ពុជា</div>
+          <div style="font-size:0.78rem; opacity:0.95;" id="khqrPosInstruction">
+            {{ settings.get('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់') }}
+          </div>
         </div>
         
-        <div style="text-align:center; margin-top:10px;">
-          <button type="button" class="btn btn-secondary" onclick="simulateKhqrSuccess()" style="font-size:0.85rem; padding:6px 14px;">
-            ⚡ សាកល្បងថាអតិថិជនស្កេនជោគជ័យ (Simulate Payment)
+        <div style="display:flex; justify-content:center; gap:8px; margin-top:12px;">
+          <button type="button" class="btn btn-primary" onclick="confirmKhqrPaymentReceived()" style="background:#10b981; font-size:0.92rem; padding:10px 18px; width:100%; border-radius:10px;">
+            <i data-lucide="check-circle-2"></i> ទទួលបានប្រាក់តាម KHQR រួចរាល់
           </button>
         </div>
       </div>
@@ -357,5 +363,13 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+  window.KHQR_CONFIG = {
+    imageUrl: `{{ settings.get('khqr_image_url', '') }}`,
+    merchantName: `{{ settings.get('khqr_merchant_name', 'SROS SRAY TEA & COFFEE') }}`,
+    bakongId: `{{ settings.get('khqr_bakong_id', 'srossray_tea@aclb') }}`,
+    instruction: `{{ settings.get('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់') }}`
+  };
+</script>
 <script src="{{ url_for('static', filename='js/pos.js') }}"></script>
 {% endblock %}

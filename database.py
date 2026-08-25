@@ -255,9 +255,10 @@ def seed_data_if_empty():
         ('shop_phone', '012 345 678 / 098 765 432', 'លេខទូរស័ព្ទទំនាក់ទំនង'),
         ('shop_address', 'ផ្ទះលេខ ១២ ផ្លូវ ២០០ រាជធានីភ្នំពេញ', 'អាសយដ្ឋានហាង'),
         ('exchange_rate', '4100', 'អត្រាប្តូរប្រាក់ (1 USD = KHR)'),
-        ('receipt_footer_km', 'សូមអរគុណចំពោះការគាំទ្រ! សូមអញ្ជើញមកម្តងទៀត!', 'សារចុងវិក្កយបត្រ'),
         ('khqr_bakong_id', 'srossray_tea@aclb', 'Bakong Account ID'),
-        ('khqr_merchant_name', 'SROS SRAY TEA & COFFEE', 'ឈ្មោះគណនីបាគង KHQR')
+        ('khqr_merchant_name', 'SROS SRAY TEA & COFFEE', 'ឈ្មោះគណនីបាគង KHQR'),
+        ('khqr_image_url', '', 'រូបភាពស្កេន KHQR (Base64 ឬ Link)'),
+        ('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់', 'ការណែនាំស្កេន KHQR')
     ]
     cursor.executemany('INSERT OR REPLACE INTO store_settings (key, value, description) VALUES (?, ?, ?)', settings)
 
