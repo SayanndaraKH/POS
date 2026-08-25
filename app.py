@@ -167,36 +167,43 @@ def get_pos_products():
     category_id = request.args.get('category_id')
     search = request.args.get('search', '').strip()
 
-    conn = get_db()
-    query = '''
-        SELECT p.*, c.name_km as category_name_km, c.name_en as category_name_en
-        FROM products p
-        JOIN categories c ON p.category_id = c.id
-        WHERE p.is_available = 1
-    '''
-    params = []
+    try:
+        conn = get_db()
+        query = '''
+            SELECT p.*, c.name_km as category_name_km, c.name_en as category_name_en
+            FROM products p
+            JOIN categories c ON p.category_id = c.id
+            WHERE p.is_available = 1
+        '''
+        params = []
 
-    if category_id and category_id != 'all':
-        query += ' AND p.category_id = ?'
-        params.append(category_id)
+        if category_id and category_id != 'all':
+            query += ' AND p.category_id = ?'
+            params.append(category_id)
 
-    if search:
-        query += ' AND (p.name_km LIKE ? OR p.name_en LIKE ? OR p.code LIKE ?)'
-        params.extend([f'%{search}%', f'%{search}%', f'%{search}%'])
+        if search:
+            query += ' AND (p.name_km LIKE ? OR p.name_en LIKE ? OR p.code LIKE ?)'
+            params.extend([f'%{search}%', f'%{search}%', f'%{search}%'])
 
-    query += ' ORDER BY p.category_id ASC, p.id ASC'
-    products = conn.execute(query, params).fetchall()
+        query += ' ORDER BY p.category_id ASC, p.id ASC'
+        products = conn.execute(query, params).fetchall()
 
-    # Attach sizes to products
-    prod_list = []
-    for p in products:
-        p_dict = dict(p)
-        sizes = conn.execute('SELECT * FROM product_sizes WHERE product_id = ? ORDER BY extra_price ASC', (p['id'],)).fetchall()
-        p_dict['sizes'] = [dict(s) for s in sizes]
-        prod_list.append(p_dict)
+        # Attach sizes to products
+        prod_list = []
+        for p in products:
+            p_dict = dict(p)
+            try:
+                sizes = conn.execute('SELECT * FROM product_sizes WHERE product_id = ? ORDER BY extra_price ASC', (p['id'],)).fetchall()
+                p_dict['sizes'] = [dict(s) for s in sizes]
+            except Exception:
+                p_dict['sizes'] = []
+            prod_list.append(p_dict)
 
-    conn.close()
-    return jsonify({'success': True, 'products': prod_list})
+        conn.close()
+        return jsonify({'success': True, 'products': prod_list})
+    except Exception as e:
+        print(f"[Warning] get_pos_products error: {e}")
+        return jsonify({'success': True, 'products': []})
 
 @app.route('/api/order/create', methods=['POST'])
 @login_required

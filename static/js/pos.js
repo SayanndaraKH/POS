@@ -27,12 +27,17 @@ async function loadProducts(catId = 'all', search = '') {
     
     const res = await fetch(url);
     const data = await res.json();
-    if (data.success) {
+    if (data.success && data.products) {
       allProducts = data.products;
       renderProductsGrid(allProducts);
+    } else {
+      allProducts = [];
+      renderProductsGrid([]);
     }
   } catch (err) {
     console.error('Failed to load products:', err);
+    allProducts = [];
+    renderProductsGrid([]);
   }
 }
 

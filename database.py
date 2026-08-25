@@ -251,195 +251,184 @@ def seed_data_if_empty():
     conn = get_db()
     cursor = conn.cursor()
 
-    # Check if users exist
-    cursor.execute('SELECT COUNT(*) as count FROM users')
-    if cursor.fetchone()['count'] > 0:
-        conn.close()
-        return
+    # 1. Users
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM users')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            admin_pw = generate_password_hash('admin123')
+            cashier_pw = generate_password_hash('123456')
+            cursor.execute('''
+                INSERT INTO users (username, password_hash, full_name, role)
+                VALUES 
+                ('admin', ?, 'អ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin)', 'admin'),
+                ('cashier', ?, 'បុគ្គលិកគិតលុយ (Cashier)', 'cashier')
+            ''', (admin_pw, cashier_pw))
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Users Error]: {e}")
 
-    # Seed Admin and Cashier Users
-    admin_pw = generate_password_hash('admin123')
-    cashier_pw = generate_password_hash('123456')
-    cursor.execute('''
-        INSERT INTO users (username, password_hash, full_name, role)
-        VALUES 
-        ('admin', ?, 'អ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin)', 'admin'),
-        ('cashier', ?, 'បុគ្គលិកគិតលុយ (Cashier)', 'cashier')
-    ''', (admin_pw, cashier_pw))
+    # 2. Store Settings
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM store_settings')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            settings = [
+                ('shop_name_km', 'ហាងតែគុជ ស្រស់ស្រាយ (Sros Sray Boba)', 'ឈ្មោះហាងជាភាសាខ្មែរ'),
+                ('shop_name_en', 'Sros Sray Boba & Beverage', 'Shop Name in English'),
+                ('shop_phone', '012 345 678 / 098 765 432', 'លេខទូរស័ព្ទទំនាក់ទំនង'),
+                ('shop_address', 'ផ្ទះលេខ ១២ ផ្លូវ ២០០ រាជធានីភ្នំពេញ', 'អាសយដ្ឋានហាង'),
+                ('exchange_rate', '4100', 'អត្រាប្តូរប្រាក់ (1 USD = KHR)'),
+                ('khqr_bakong_id', 'srossray_tea@aclb', 'Bakong Account ID'),
+                ('khqr_merchant_name', 'SROS SRAY TEA & COFFEE', 'ឈ្មោះគណនីបាគង KHQR'),
+                ('khqr_image_url', '', 'រូបភាពស្កេន KHQR (Base64 ឬ Link)'),
+                ('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់', 'ការណែនាំស្កេន KHQR')
+            ]
+            cursor.executemany('INSERT OR REPLACE INTO store_settings (key, value, description) VALUES (?, ?, ?)', settings)
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Settings Error]: {e}")
 
-    # Seed Store Settings
-    settings = [
-        ('shop_name_km', 'ហាងតែគុជ ស្រស់ស្រាយ (Sros Sray Boba)', 'ឈ្មោះហាងជាភាសាខ្មែរ'),
-        ('shop_name_en', 'Sros Sray Boba & Beverage', 'Shop Name in English'),
-        ('shop_phone', '012 345 678 / 098 765 432', 'លេខទូរស័ព្ទទំនាក់ទំនង'),
-        ('shop_address', 'ផ្ទះលេខ ១២ ផ្លូវ ២០០ រាជធានីភ្នំពេញ', 'អាសយដ្ឋានហាង'),
-        ('exchange_rate', '4100', 'អត្រាប្តូរប្រាក់ (1 USD = KHR)'),
-        ('khqr_bakong_id', 'srossray_tea@aclb', 'Bakong Account ID'),
-        ('khqr_merchant_name', 'SROS SRAY TEA & COFFEE', 'ឈ្មោះគណនីបាគង KHQR'),
-        ('khqr_image_url', '', 'រូបភាពស្កេន KHQR (Base64 ឬ Link)'),
-        ('khqr_instruction', 'ស្កេនទូទាត់ប្រាក់តាមកម្មវិធីបាគង ឬគ្រប់កម្មវិធីធនាគារទាំងអស់', 'ការណែនាំស្កេន KHQR')
-    ]
-    cursor.executemany('INSERT OR REPLACE INTO store_settings (key, value, description) VALUES (?, ?, ?)', settings)
+    # 3. Raw Materials (Inventory)
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM raw_materials')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            raw_materials = [
+                ('កែវទំហំ M (500ml)', 'Plastic Cups M', 'pcs', 500, 50, 0.05),
+                ('កែវទំហំ L (700ml)', 'Plastic Cups L', 'pcs', 500, 50, 0.07),
+                ('ទុយោតែគុជ', 'Boba Straws', 'pcs', 800, 100, 0.01),
+                ('ផ្លាស្ទិកបិទមាត់កែវ/គម្រប', 'Cup Seal Film', 'pcs', 1000, 100, 0.01),
+                ('គ្រាប់គុជឆៅ (Boba)', 'Raw Boba Pearls', 'g', 10000, 1500, 0.005),
+                ('គ្រាប់គុជស (Crystal Pearl)', 'Crystal White Pearls', 'g', 5000, 1000, 0.008),
+                ('ស្លឹកតែខ្មៅបុរាណ', 'Black Tea Leaves', 'g', 4000, 500, 0.012),
+                ('ម្សៅតែបៃតង Matcha', 'Green Tea Matcha Powder', 'g', 3000, 400, 0.02),
+                ('ស្លឹកតែក្រហមថៃ', 'Thai Tea Leaves', 'g', 3500, 500, 0.01),
+                ('ម្សៅត្រសក់ស្រូវ (Taro)', 'Taro Powder', 'g', 4000, 500, 0.015),
+                ('គ្រាប់កាហ្វេ Arabica/Robusta', 'Coffee Beans', 'g', 5000, 800, 0.018),
+                ('ទឹកដោះគោស្រស់ (Fresh Milk)', 'Fresh Milk', 'ml', 15000, 2000, 0.002),
+                ('ទឹកដោះគោខាប់', 'Condensed Milk', 'ml', 10000, 1500, 0.003),
+                ('ទឹកស៊ីរ៉ូស្ករធម្មជាតិ', 'Sugar Syrup', 'ml', 12000, 2000, 0.002),
+                ('ទឹកស៊ីរ៉ូស្ករត្នោត (Brown Sugar)', 'Brown Sugar Syrup', 'ml', 8000, 1000, 0.004),
+                ('ទឹកផ្លែផាសិនសុទ្ធ', 'Fresh Passion Puree', 'ml', 5000, 800, 0.005),
+                ('ទឹកផ្លែស្ត្រប៊ែរីសុទ្ធ', 'Strawberry Puree', 'ml', 5000, 800, 0.006),
+                ('ម្សៅពពុះឈីស (Cheese Powder)', 'Cheese Foam Powder', 'g', 3000, 400, 0.025),
+                ('ពងមាន់ភូឌីង (Pudding)', 'Egg Pudding', 'g', 3000, 500, 0.01)
+            ]
+            cursor.executemany('''
+                INSERT INTO raw_materials (name_km, name_en, unit, current_stock, min_threshold, cost_per_unit)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', raw_materials)
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Raw Materials Error]: {e}")
 
-    # Seed Raw Materials (Inventory)
-    raw_materials = [
-        # (name_km, name_en, unit, current_stock, min_threshold, cost_per_unit)
-        ('កែវទំហំ M (500ml)', 'Plastic Cups M', 'pcs', 500, 50, 0.05),
-        ('កែវទំហំ L (700ml)', 'Plastic Cups L', 'pcs', 500, 50, 0.07),
-        ('ទុយោតែគុជ', 'Boba Straws', 'pcs', 800, 100, 0.01),
-        ('ផ្លាស្ទិកបិទមាត់កែវ/គម្រប', 'Cup Seal Film', 'pcs', 1000, 100, 0.01),
-        ('គ្រាប់គុជឆៅ (Boba)', 'Raw Boba Pearls', 'g', 10000, 1500, 0.005),
-        ('គ្រាប់គុជស (Crystal Pearl)', 'Crystal White Pearls', 'g', 5000, 1000, 0.008),
-        ('ស្លឹកតែខ្មៅបុរាណ', 'Black Tea Leaves', 'g', 4000, 500, 0.012),
-        ('ម្សៅតែបៃតង Matcha', 'Green Tea Matcha Powder', 'g', 3000, 400, 0.02),
-        ('ស្លឹកតែក្រហមថៃ', 'Thai Tea Leaves', 'g', 3500, 500, 0.01),
-        ('ម្សៅត្រសក់ស្រូវ (Taro)', 'Taro Powder', 'g', 4000, 500, 0.015),
-        ('គ្រាប់កាហ្វេ Arabica/Robusta', 'Coffee Beans', 'g', 5000, 800, 0.018),
-        ('ទឹកដោះគោស្រស់ (Fresh Milk)', 'Fresh Milk', 'ml', 15000, 2000, 0.002),
-        ('ទឹកដោះគោខាប់', 'Condensed Milk', 'ml', 10000, 1500, 0.003),
-        ('ទឹកស៊ីរ៉ូស្ករធម្មជាតិ', 'Sugar Syrup', 'ml', 12000, 2000, 0.002),
-        ('ទឹកស៊ីរ៉ូស្ករត្នោត (Brown Sugar)', 'Brown Sugar Syrup', 'ml', 8000, 1000, 0.004),
-        ('ទឹកផ្លែផាសិនសុទ្ធ', 'Fresh Passion Puree', 'ml', 5000, 800, 0.005),
-        ('ទឹកផ្លែស្ត្រប៊ែរីសុទ្ធ', 'Strawberry Puree', 'ml', 5000, 800, 0.006),
-        ('ម្សៅពពុះឈីស (Cheese Powder)', 'Cheese Foam Powder', 'g', 3000, 400, 0.025),
-        ('ពងមាន់ភូឌីង (Pudding)', 'Egg Pudding', 'g', 3000, 500, 0.01)
-    ]
-    cursor.executemany('''
-        INSERT INTO raw_materials (name_km, name_en, unit, current_stock, min_threshold, cost_per_unit)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', raw_materials)
+    # 4. Categories
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM categories')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            categories = [
+                ('តែគុជ & តែដោះគោ', 'Milk Tea Series', 'cup-soda', '#10b981', 1),
+                ('កាហ្វេឈ្ងុយឆ្ងាញ់', 'Coffee Selection', 'coffee', '#b45309', 2),
+                ('តែផ្លែឈើ & ទឹកក្រឡុក', 'Fruit Tea & Smoothies', 'citrus', '#f59e0b', 3),
+                ('ភេសជ្ជៈពិសេស & សូកូឡា', 'Special Brews & Choco', 'sparkles', '#8b5cf6', 4),
+                ('នំ និងអាហារសម្រន់', 'Snacks & Bakery', 'cookie', '#ec4899', 5)
+            ]
+            cursor.executemany('''
+                INSERT INTO categories (name_km, name_en, icon, color, sort_order)
+                VALUES (?, ?, ?, ?, ?)
+            ''', categories)
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Categories Error]: {e}")
 
-    # Seed Categories
-    categories = [
-        ('តែគុជ & តែដោះគោ', 'Milk Tea Series', 'cup-soda', '#10b981', 1),
-        ('កាហ្វេឈ្ងុយឆ្ងាញ់', 'Coffee Selection', 'coffee', '#b45309', 2),
-        ('តែផ្លែឈើ & ទឹកក្រឡុក', 'Fruit Tea & Smoothies', 'citrus', '#f59e0b', 3),
-        ('ភេសជ្ជៈពិសេស & សូកូឡា', 'Special Brews & Choco', 'sparkles', '#8b5cf6', 4),
-        ('នំ និងអាហារសម្រន់', 'Snacks & Bakery', 'cookie', '#ec4899', 5)
-    ]
-    cursor.executemany('''
-        INSERT INTO categories (name_km, name_en, icon, color, sort_order)
-        VALUES (?, ?, ?, ?, ?)
-    ''', categories)
+    # 5. Toppings
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM toppings')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            toppings = [
+                ('គុជខ្មៅស្ករត្នោត', 'Brown Sugar Boba', 0.35, 5, 35.0),
+                ('គុជសគ្រីស្តាល់', 'Crystal White Pearls', 0.40, 6, 30.0),
+                ('ពពុះឈីសក្រអូប', 'Cheese Foam', 0.50, 18, 25.0),
+                ('ពងមាន់ភូឌីង', 'Egg Pudding', 0.45, 19, 45.0),
+                ('ចាហួយដូងធម្មជាតិ', 'Coconut Jelly', 0.35, None, 0.0),
+                ('គ្រាប់ជីសុខភាព', 'Chia Seeds', 0.25, None, 0.0)
+            ]
+            cursor.executemany('''
+                INSERT INTO toppings (name_km, name_en, price, raw_material_id, deduction_amount)
+                VALUES (?, ?, ?, ?, ?)
+            ''', toppings)
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Toppings Error]: {e}")
 
-    # Seed Toppings
-    # Map toppings to raw materials: 5: Boba (30g), 6: Crystal (30g), 18: Cheese Powder (20g), 19: Pudding (40g)
-    toppings = [
-        ('គុជខ្មៅស្ករត្នោត', 'Brown Sugar Boba', 0.35, 5, 35.0),
-        ('គុជសគ្រីស្តាល់', 'Crystal White Pearls', 0.40, 6, 30.0),
-        ('ពពុះឈីសក្រអូប', 'Cheese Foam', 0.50, 18, 25.0),
-        ('ពងមាន់ភូឌីង', 'Egg Pudding', 0.45, 19, 45.0),
-        ('ចាហួយដូងធម្មជាតិ', 'Coconut Jelly', 0.35, None, 0.0),
-        ('គ្រាប់ជីសុខភាព', 'Chia Seeds', 0.25, None, 0.0)
-    ]
-    cursor.executemany('''
-        INSERT INTO toppings (name_km, name_en, price, raw_material_id, deduction_amount)
-        VALUES (?, ?, ?, ?, ?)
-    ''', toppings)
+    # 6. Products & Sizes
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM products')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            products = [
+                (1, 'តែគុជស្ករត្នោតទឹកដោះគោស្រស់', 'Brown Sugar Boba Fresh Milk', 'MT01', 2.25, '/static/images/brown_sugar_boba.svg', 'តែគុជស្ករត្នោតដ៏ពេញនិយម រសជាតិផ្អែមឈ្ងុយ និងទឹកដោះគោស្រស់សុទ្ធ'),
+                (1, 'តែបៃតងដោះគោ (Matcha Green Tea)', 'Signature Matcha Milk Tea', 'MT02', 2.00, '/static/images/matcha_latte.svg', 'តែបៃតងម៉ាត់ឆាគុណភាពខ្ពស់ ឈ្ងុយឆ្ងាញ់ពិសេស'),
+                (1, 'តែទឹកដោះគោបុរាណ (Classic Milk Tea)', 'Classic Signature Milk Tea', 'MT03', 1.75, '/static/images/classic_milk_tea.svg', 'តែទឹកដោះគោរសជាតិដើម ឈ្ងុយស្លឹកតែខ្មៅដិតដល់'),
+                (1, 'តែក្រហមថៃដោះគោ (Thai Milk Tea)', 'Thai Red Milk Tea', 'MT04', 1.85, '/static/images/thai_tea.svg', 'តែថៃពណ៌ទឹកក្រូចដ៏ល្បីល្បាញ រសជាតិផ្អែមមុតស្រាល'),
+                (1, 'តែត្រសក់ស្រូវដោះគោ (Taro Milk Tea)', 'Taro Milk Tea', 'MT05', 2.00, '/static/images/taro_milk_tea.svg', 'រសជាតិត្រសក់ស្រូវពណ៌ស្វាយ ផ្អែមឈ្ងុយប្លែកមាត់'),
+                (2, 'កាហ្វេទឹកដោះគោទឹកកក (Iced Milk Coffee)', 'Cambodian Iced Milk Coffee', 'CF01', 1.50, '/static/images/iced_coffee.svg', 'កាហ្វេទឹកដោះគោបែបខ្មែរ ឈ្ងុយដិតស្រស់ស្រាយ'),
+                (2, 'កាហ្វេអាមេរិកាណូទឹកកក (Iced Americano)', 'Iced Americano', 'CF02', 1.50, '/static/images/americano.svg', 'កាហ្វេខ្មៅសុទ្ធ មិនផ្អែម ជំនួយដល់ការងារ'),
+                (2, 'កាហ្វេឡាតេទឹកកក (Iced Latte)', 'Iced Cafe Latte', 'CF03', 2.00, '/static/images/latte.svg', 'កាហ្វេអេស្ព្រេសសូ លាយជាមួយទឹកដោះគោស្រស់'),
+                (2, 'កាហ្វេម៉ូកាទឹកកក (Iced Mocha)', 'Iced Mocha Coffee', 'CF04', 2.25, '/static/images/mocha.svg', 'កាហ្វេបូកផ្សំជាមួយសូកូឡាដិត'),
+                (3, 'តែផាសិនទឹកឃ្មុំស្រស់ (Fresh Passion Fruit Tea)', 'Fresh Passion Honey Tea', 'FT01', 1.75, '/static/images/passion_tea.svg', 'រសជាតិជូរអែមត្រជាក់ស្រស់ស្រាយបំបាត់ការស្រេកទឹក'),
+                (3, 'ទឹកស្ត្រប៊ែរីក្រឡុក (Strawberry Smoothie)', 'Strawberry Cream Smoothie', 'FT02', 2.50, '/static/images/strawberry_smoothie.svg', 'ស្ត្រប៊ែរីក្រឡុកជាមួយទឹកដោះគោ រសជាតិឆ្ងាញ់ជាប់ចិត្ត'),
+                (3, 'តែក្រូចឆ្មារទឹកឃ្មុំ (Lemon Honey Green Tea)', 'Honey Lemon Green Tea', 'FT03', 1.75, '/static/images/lemon_tea.svg', 'តែបៃតងក្រូចឆ្មារ ជួយជំនួយបំពង់ក'),
+                (4, 'សូកូឡាទឹកដោះគោទឹកកក (Signature Chocolate)', 'Rich Dark Chocolate Milk', 'SP01', 2.00, '/static/images/chocolate.svg', 'សូកូឡាដិតគុណភាពខ្ពស់ ផ្អែមឈ្ងុយ'),
+                (4, 'តែបៃតងម៉ាត់ឆាពពុះឈីស (Matcha Cheese Foam)', 'Matcha Cheese Foam Supreme', 'SP02', 2.75, '/static/images/matcha_cheese.svg', 'តែបៃតងម៉ាត់ឆាខាងក្រោម បូកជាមួយពពុះឈីសក្រអូបខាងលើ')
+            ]
+            cursor.executemany('''
+                INSERT INTO products (category_id, name_km, name_en, code, base_price, image_url, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', products)
+            conn.commit()
 
-    # Seed Products
-    products = [
-        # Cat 1: Milk Tea
-        (1, 'តែគុជស្ករត្នោតទឹកដោះគោស្រស់', 'Brown Sugar Boba Fresh Milk', 'MT01', 2.25, '/static/images/brown_sugar_boba.svg', 'តែគុជស្ករត្នោតដ៏ពេញនិយម រសជាតិផ្អែមឈ្ងុយ និងទឹកដោះគោស្រស់សុទ្ធ'),
-        (1, 'តែបៃតងដោះគោ (Matcha Green Tea)', 'Signature Matcha Milk Tea', 'MT02', 2.00, '/static/images/matcha_latte.svg', 'តែបៃតងម៉ាត់ឆាគុណភាពខ្ពស់ ឈ្ងុយឆ្ងាញ់ពិសេស'),
-        (1, 'តែទឹកដោះគោបុរាណ (Classic Milk Tea)', 'Classic Signature Milk Tea', 'MT03', 1.75, '/static/images/classic_milk_tea.svg', 'តែទឹកដោះគោរសជាតិដើម ឈ្ងុយស្លឹកតែខ្មៅដិតដល់'),
-        (1, 'តែក្រហមថៃដោះគោ (Thai Milk Tea)', 'Thai Red Milk Tea', 'MT04', 1.85, '/static/images/thai_tea.svg', 'តែថៃពណ៌ទឹកក្រូចដ៏ល្បីល្បាញ រសជាតិផ្អែមមុតស្រាល'),
-        (1, 'តែត្រសក់ស្រូវដោះគោ (Taro Milk Tea)', 'Taro Milk Tea', 'MT05', 2.00, '/static/images/taro_milk_tea.svg', 'រសជាតិត្រសក់ស្រូវពណ៌ស្វាយ ផ្អែមឈ្ងុយប្លែកមាត់'),
-        
-        # Cat 2: Coffee
-        (2, 'កាហ្វេទឹកដោះគោទឹកកក (Iced Milk Coffee)', 'Cambodian Iced Milk Coffee', 'CF01', 1.50, '/static/images/iced_coffee.svg', 'កាហ្វេទឹកដោះគោបែបខ្មែរ ឈ្ងុយដិតស្រស់ស្រាយ'),
-        (2, 'កាហ្វេអាមេរិកាណូទឹកកក (Iced Americano)', 'Iced Americano', 'CF02', 1.50, '/static/images/americano.svg', 'កាហ្វេខ្មៅសុទ្ធ មិនផ្អែម ជំនួយដល់ការងារ'),
-        (2, 'កាហ្វេឡាតេទឹកកក (Iced Latte)', 'Iced Cafe Latte', 'CF03', 2.00, '/static/images/latte.svg', 'កាហ្វេអេស្ព្រេសសូ លាយជាមួយទឹកដោះគោស្រស់'),
-        (2, 'កាហ្វេម៉ូកាទឹកកក (Iced Mocha)', 'Iced Mocha Coffee', 'CF04', 2.25, '/static/images/mocha.svg', 'កាហ្វេបូកផ្សំជាមួយសូកូឡាដិត'),
+            # Seed Product Sizes
+            cursor.execute('SELECT id FROM products')
+            p_rows = cursor.fetchall()
+            sizes = []
+            for r in p_rows:
+                pid = r['id'] if isinstance(r, dict) else r[0]
+                sizes.append((pid, 'M', 'កែវកណ្តាល (Medium)', 'Medium (500ml)', 0.00))
+                sizes.append((pid, 'L', 'កែវធំ (Large)', 'Large (700ml)', 0.50))
+            cursor.executemany('''
+                INSERT INTO product_sizes (product_id, size_code, size_name_km, size_name_en, extra_price)
+                VALUES (?, ?, ?, ?, ?)
+            ''', sizes)
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Products Error]: {e}")
 
-        # Cat 3: Fruit Tea & Smoothies
-        (3, 'តែផាសិនទឹកឃ្មុំស្រស់ (Fresh Passion Fruit Tea)', 'Fresh Passion Honey Tea', 'FT01', 1.75, '/static/images/passion_tea.svg', 'រសជាតិជូរអែមត្រជាក់ស្រស់ស្រាយបំបាត់ការស្រេកទឹក'),
-        (3, 'ទឹកស្ត្រប៊ែរីក្រឡុក (Strawberry Smoothie)', 'Strawberry Cream Smoothie', 'FT02', 2.50, '/static/images/strawberry_smoothie.svg', 'ស្ត្រប៊ែរីក្រឡុកជាមួយទឹកដោះគោ រសជាតិឆ្ងាញ់ជាប់ចិត្ត'),
-        (3, 'តែក្រូចឆ្មារទឹកឃ្មុំ (Lemon Honey Green Tea)', 'Honey Lemon Green Tea', 'FT03', 1.75, '/static/images/lemon_tea.svg', 'តែបៃតងក្រូចឆ្មារ ជួយជំនួយបំពង់ក'),
+    # 7. Initial Shift
+    try:
+        cursor.execute('SELECT COUNT(*) as count FROM shifts')
+        row = cursor.fetchone()
+        count = row['count'] if isinstance(row, dict) else (row[0] if row else 0)
+        if count == 0:
+            cursor.execute('''
+                INSERT INTO shifts (cashier_id, opening_float_usd, opening_float_khr, status, notes)
+                VALUES (2, 20.0, 80000.0, 'open', 'វេនពេលព្រឹកដំបូង')
+            ''')
+            conn.commit()
+    except Exception as e:
+        print(f"[Seed Shift Error]: {e}")
 
-        # Cat 4: Special Brews
-        (4, 'សូកូឡាទឹកដោះគោទឹកកក (Signature Chocolate)', 'Rich Dark Chocolate Milk', 'SP01', 2.00, '/static/images/chocolate.svg', 'សូកូឡាដិតគុណភាពខ្ពស់ ផ្អែមឈ្ងុយ'),
-        (4, 'តែបៃតងម៉ាត់ឆាពពុះឈីស (Matcha Cheese Foam)', 'Matcha Cheese Foam Supreme', 'SP02', 2.75, '/static/images/matcha_cheese.svg', 'តែបៃតងម៉ាត់ឆាខាងក្រោម បូកជាមួយពពុះឈីសក្រអូបខាងលើ')
-    ]
-    cursor.executemany('''
-        INSERT INTO products (category_id, name_km, name_en, code, base_price, image_url, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', products)
-
-    # Seed Product Sizes (Standard M = +$0.00, L = +$0.50)
-    cursor.execute('SELECT id FROM products')
-    prod_ids = [row['id'] for row in cursor.fetchall()]
-    for pid in prod_ids:
-        cursor.execute('''
-            INSERT INTO product_sizes (product_id, size_code, size_name_km, size_name_en, extra_price)
-            VALUES 
-            (?, 'M', 'កែវកណ្តាល (Medium)', 'Medium (500ml)', 0.00),
-            (?, 'L', 'កែវធំ (Large)', 'Large (700ml)', 0.50)
-        ''', (pid, pid))
-
-    # Seed Standard Recipes (Raw material deduction linkage)
-    # Every drink needs: 1 cup (M: 1, L: 2), 1 straw (3), 1 seal (4)
-    # Specific drinks need tea/coffee/milk/syrup
-    recipes = []
-    # 1: Brown Sugar Boba (pid=1) -> Cup(1/2), Straw(3), Seal(4), Boba(5, 40g), Fresh Milk(12, 200ml), Brown Sugar Syrup(15, 30ml)
-    recipes.append((1, 1, 1.0, 'M'))
-    recipes.append((1, 2, 1.0, 'L'))
-    recipes.append((1, 3, 1.0, 'ALL'))
-    recipes.append((1, 4, 1.0, 'ALL'))
-    recipes.append((1, 5, 40.0, 'ALL'))
-    recipes.append((1, 12, 180.0, 'M'))
-    recipes.append((1, 12, 250.0, 'L'))
-    recipes.append((1, 15, 30.0, 'ALL'))
-
-    # 2: Matcha Green Tea (pid=2) -> Cup, Straw, Seal, Matcha(8, 15g), Fresh Milk(12, 150ml), Syrup(14, 25ml)
-    recipes.append((2, 1, 1.0, 'M'))
-    recipes.append((2, 2, 1.0, 'L'))
-    recipes.append((2, 3, 1.0, 'ALL'))
-    recipes.append((2, 4, 1.0, 'ALL'))
-    recipes.append((2, 8, 15.0, 'ALL'))
-    recipes.append((2, 12, 150.0, 'ALL'))
-    recipes.append((2, 14, 25.0, 'ALL'))
-
-    # 3: Classic Milk Tea (pid=3) -> Cup, Straw, Seal, Black Tea(7, 20g), Condensed Milk(13, 30ml), Fresh Milk(12, 100ml)
-    recipes.append((3, 1, 1.0, 'M'))
-    recipes.append((3, 2, 1.0, 'L'))
-    recipes.append((3, 3, 1.0, 'ALL'))
-    recipes.append((3, 4, 1.0, 'ALL'))
-    recipes.append((3, 7, 20.0, 'ALL'))
-    recipes.append((3, 13, 30.0, 'ALL'))
-    recipes.append((3, 12, 100.0, 'ALL'))
-
-    # 6: Iced Milk Coffee (pid=6) -> Cup, Straw, Seal, Coffee Beans(11, 20g), Condensed Milk(13, 35ml), Fresh Milk(12, 60ml)
-    recipes.append((6, 1, 1.0, 'M'))
-    recipes.append((6, 2, 1.0, 'L'))
-    recipes.append((6, 3, 1.0, 'ALL'))
-    recipes.append((6, 4, 1.0, 'ALL'))
-    recipes.append((6, 11, 20.0, 'ALL'))
-    recipes.append((6, 13, 35.0, 'ALL'))
-    recipes.append((6, 12, 60.0, 'ALL'))
-
-    # General recipe fallback for other drinks
-    for pid in range(4, 15):
-        if pid not in [6]:
-            recipes.append((pid, 1, 1.0, 'M'))
-            recipes.append((pid, 2, 1.0, 'L'))
-            recipes.append((pid, 3, 1.0, 'ALL'))
-            recipes.append((pid, 4, 1.0, 'ALL'))
-
-    cursor.executemany('''
-        INSERT INTO product_recipes (product_id, raw_material_id, quantity_used, for_size)
-        VALUES (?, ?, ?, ?)
-    ''', recipes)
-
-    # Seed Initial Shift (open shift for cashier)
-    cursor.execute('''
-        INSERT INTO shifts (cashier_id, opening_float_usd, opening_float_khr, status, notes)
-        VALUES (2, 20.0, 80000.0, 'open', 'វេនពេលព្រឹកដំបូង')
-    ''')
-
-    conn.commit()
     conn.close()
-    print("Database initialized and seeded successfully!")
+    print("Database seeding checked and executed.")
 
 # Helper functions for POS & Orders
 def get_store_settings():
